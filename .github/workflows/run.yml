@@ -1,0 +1,84 @@
+name: Run stock tool
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_mode:
+        description: "Confirm mode: morning_session (for afternoon) or latest (for morning/real-time)"
+        required: true
+        default: "morning_session"
+        type: choice
+        options:
+          - morning_session
+          - latest
+      morning_end_jst:
+        description: "Cutoff time for morning_session (JST, e.g. 11:30)"
+        required: true
+        default: "11:30"
+        type: string
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run main.py
+        env:
+          CONFIRM_BAR_MODE: ${{ inputs.confirm_mode }}
+          MORNING_END_JST: ${{ inputs.morning_end_jst }}
+        run: |
+          echo "Running with CONFIRM_BAR_MODE=${CONFIRM_BAR_MODE}, MORNING_END_JST=${MORNING_END_JST}"
+          python main.py | tee run.log
+
+      - name: Show latest outputs in log
+        if: always()
+        run: |
+          echo ""
+          echo "===== LATEST OUTPUTS ====="
+          ls -la outputs || true
+
+          echo ""
+          echo "===== today_candidates_latest.json ====="
+          if [ -f outputs/today_candidates_latest.json ]; then
+            cat outputs/today_candidates_latest.json
+          else
+            echo "not found"
+          fi
+
+          echo ""
+          echo "===== candidates_today_latest.csv (head) ====="
+          if [ -f outputs/candidates_today_latest.csv ]; then
+            head -n 30 outputs/candidates_today_latest.csv
+          else
+            echo "not found"
+          fi
+
+      - name: Upload log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: run-log
+          path: run.log
+          if-no-files-found: warn
+
+      - name: Upload outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: outputs
+          path: outputs/**
+          if-no-files-found: warn
