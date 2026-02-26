@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # dataブランチへpushするために必要
+  contents: write
 
 jobs:
   run:
@@ -22,6 +22,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
+          fetch-depth: 0          # dataブランチ操作のため
+          persist-credentials: true
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -34,12 +36,7 @@ jobs:
 
       - name: Decide mode (scan_morning / scan_close / nightly)
         run: |
-          # Default: auto by UTC hour for schedule runs
-          # UTC 02:xx -> scan_morning
-          # UTC 07:xx -> scan_close
-          # UTC 12:xx -> nightly
           HOUR=$(date -u +"%H")
-
           if [ "$HOUR" = "02" ]; then
             echo "MODE=scan_morning" >> $GITHUB_ENV
           elif [ "$HOUR" = "07" ]; then
@@ -47,65 +44,32 @@ jobs:
           else
             echo "MODE=nightly" >> $GITHUB_ENV
           fi
+          echo "UTC_HOUR=$HOUR" >> $GITHUB_ENV
 
-          echo "UTC_HOUR=$HOUR"
-          echo "MODE=$MODE"
-
-      # --- dataブランチ（永続ストレージ）の用意 ---
-      - name: Checkout data branch (outputs storage)
-        uses: actions/checkout@v4
-        with:
-          ref: data
-          path: data_branch
-        continue-on-error: true
-
-      - name: Initialize data branch if missing
-        if: ${{ failure() }}
+      - name: Show mode
         run: |
-          mkdir -p data_branch
-          cd data_branch
-          git init
-          git remote add origin https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
-          git fetch origin data || true
-          # create orphan-like branch
-          git checkout -b data
-          mkdir -p outputs/signals outputs/results outputs/aggregates
-          echo "# outputs storage branch" > README.md
-          git add .
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -m "init data branch"
-          git push -u origin data
+          echo "UTC_HOUR=${UTC_HOUR}"
+          echo "MODE=${MODE}"
 
-      # mainブランチのコード側 outputs を data ブランチ側に同期して処理する
-      - name: Prepare workspace outputs from data branch
+      - name: Ensure outputs dirs exist
         run: |
-          rm -rf outputs || true
-          mkdir -p outputs
-          # data_branch/outputs があればコピー
-          if [ -d "data_branch/outputs" ]; then
-            cp -r data_branch/outputs/* outputs/ || true
-          fi
           mkdir -p outputs/signals outputs/results outputs/aggregates
 
-      # --- 朝：scan(morning) ---
+      # ---- Scan steps ----
       - name: Run scan (morning)
         if: env.MODE == 'scan_morning'
         run: |
           python main.py --session morning
 
-      # --- 夕：scan(close) ---
       - name: Run scan (close)
         if: env.MODE == 'scan_close'
         run: |
           python main.py --session close
 
-      # --- 夜：evaluate + aggregate ---
-      - name: Run evaluate (nightly)
+      # ---- Nightly steps ----
+      - name: Run evaluation (nightly)
         if: env.MODE == 'nightly'
         run: |
-          # NOTE: close直後のものは eval_start が未来になり得るので
-          # evaluate側に「未来ならOPENでスキップ」ガードを入れておくのがベター
           python evaluate_results.py --latest-meta || true
 
       - name: Run aggregate (nightly)
@@ -113,28 +77,40 @@ jobs:
         run: |
           python aggregate.py || true
 
-      # --- outputs を data ブランチへ保存 ---
-      - name: Commit outputs to data branch
+      # ---- Persist outputs to data branch ----
+      - name: Persist outputs to data branch
         run: |
-          # outputs を data_branch に反映
-          rm -rf data_branch/outputs || true
-          mkdir -p data_branch/outputs
-          cp -r outputs/* data_branch/outputs/
+          set -e
 
-          cd data_branch
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # fetch data branch if exists
+          git fetch origin data || true
+
+          # create/switch to data branch
+          if git show-ref --quiet refs/remotes/origin/data; then
+            git checkout -B data origin/data
+          else
+            git checkout --orphan data
+            git rm -rf . || true
+            mkdir -p outputs/signals outputs/results outputs/aggregates
+            echo "# outputs storage branch" > README.md
+            git add README.md outputs
+            git commit -m "init data branch"
+          fi
+
+          # bring outputs from main workspace into data branch
+          # (main workspace outputs already in this working tree, so nothing to copy)
           git add outputs || true
 
-          # 変更があるときだけcommit
           if git diff --cached --quiet; then
-            echo "No changes to commit."
+            echo "No outputs changes to commit."
           else
             git commit -m "update outputs $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
             git push origin data
           fi
 
-      # --- 直近7日ぶんは artifact でも残す（お守り） ---
       - name: Upload outputs artifact (7 days)
         uses: actions/upload-artifact@v4
         with:
