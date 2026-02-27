@@ -1,105 +1,325 @@
 import os
 import json
+import glob
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
+
 import pandas as pd
 import yfinance as yf
 
-SIGNALS_DIR = "signals"
-OUTPUT_DIR = "results"
-LATEST_META = "outputs/today_candidates_latest_meta.json"
 
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-
-def load_latest_signal_path():
-    if not os.path.exists(LATEST_META):
-        raise FileNotFoundError("latest_meta not found")
-    with open(LATEST_META, "r", encoding="utf-8") as f:
-        meta = json.load(f)
-    return meta["latest_file"]
+DEFAULT_SIGNALS_DIR = "signals"
+DEFAULT_RESULTS_DIR = "results"
+DEFAULT_LATEST_META = os.path.join("outputs", "today_candidates_latest_meta.json")
 
 
-def find_signal_file(date_str, session):
-    fname = f"signals_{date_str}_{session}.json"
-    path = os.path.join(SIGNALS_DIR, fname)
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"{path} not found")
-    return path
+def _ensure_dir(path: str) -> None:
+    os.makedirs(path, exist_ok=True)
 
 
-def evaluate_trade(ticker, entry, sl, tp, shares, start_date):
-    df = yf.download(ticker, start=start_date, interval="1h", progress=False)
-    if df.empty:
-        return None
+def _read_json(path: str) -> dict:
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
-    for _, row in df.iterrows():
-        high = row["High"]
-        low = row["Low"]
 
-        if low <= sl:
-            r = (sl - entry) / (entry - sl)
-            pnl = (sl - entry) * shares
-            return {"result": "LOSS", "R": -1, "pnl_yen": pnl}
+def _write_json(path: str, obj: dict) -> None:
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(obj, f, indent=2, ensure_ascii=False)
 
-        if high >= tp:
-            r = (tp - entry) / (entry - sl)
-            pnl = (tp - entry) * shares
-            return {"result": "WIN", "R": r, "pnl_yen": pnl}
 
-    return {"result": "OPEN", "R": 0, "pnl_yen": 0}
+def _coerce_utc_index(df: pd.DataFrame) -> pd.DataFrame:
+    """Ensure datetime index is tz-aware UTC to avoid timezone surprises."""
+    if df is None or df.empty:
+        return df
+    idx = pd.to_datetime(df.index, utc=True, errors="coerce")
+    df = df.copy()
+    df.index = idx
+    df = df[~df.index.isna()]
+    return df
+
+
+def _normalize_ohlcv(df: pd.DataFrame, ticker: str) -> pd.DataFrame:
+    """
+    yfinance sometimes returns:
+      - single-index columns: Open/High/Low/Close/Adj Close/Volume
+      - MultiIndex columns: (Field, Ticker)
+    This normalizes to a single-ticker OHLCV DataFrame with single-level columns.
+    """
+    if df is None or df.empty:
+        return df
+
+    df = df.copy()
+
+    # MultiIndex: (Field, Ticker)
+    if isinstance(df.columns, pd.MultiIndex):
+        # try to select the requested ticker
+        lvl1 = df.columns.get_level_values(1)
+        if ticker in set(lvl1):
+            df = df.xs(ticker, level=1, axis=1)
+        else:
+            # fallback: pick the first ticker present
+            first_ticker = list(dict.fromkeys(lvl1))[0]
+            df = df.xs(first_ticker, level=1, axis=1)
+
+    # Some environments still yield duplicated columns; keep first occurrence
+    if df.columns.duplicated().any():
+        df = df.loc[:, ~df.columns.duplicated()]
+
+    # Ensure expected columns exist (Title-case variants)
+    # yfinance uses "Adj Close" (space) sometimes.
+    col_map = {c: str(c) for c in df.columns}
+    df.rename(columns=col_map, inplace=True)
+
+    return _coerce_utc_index(df)
+
+
+def _resolve_signal_path_from_latest_meta(latest_meta_path: str, signals_dir: str) -> str:
+    meta = _read_json(latest_meta_path)
+    latest_file = meta.get("latest_file")
+    if not latest_file:
+        raise FileNotFoundError(f"latest_file not found in {latest_meta_path}")
+
+    # Case A: already correct relative path e.g. "signals/signals_YYYY-MM-DD_close.json"
+    candidates = []
+
+    # 1) as-is
+    candidates.append(latest_file)
+
+    # 2) prepend signals_dir if it looks like only a filename
+    if os.path.basename(latest_file) == latest_file:
+        candidates.append(os.path.join(signals_dir, latest_file))
+
+    # 3) if it is like "2026-02-27_close.json" (missing prefix "signals_")
+    base = os.path.basename(latest_file)
+    if base and not base.startswith("signals_") and ("_" in base):
+        # try to build correct name
+        # expected: signals_YYYY-MM-DD_session.json
+        candidates.append(os.path.join(signals_dir, f"signals_{base}"))
+
+    # 4) also try forcing directory "signals/"
+    if not latest_file.startswith(signals_dir + os.sep) and not latest_file.startswith(signals_dir + "/"):
+        candidates.append(os.path.join(signals_dir, base))
+
+    # pick first existing
+    for p in candidates:
+        if p and os.path.exists(p):
+            return p
+
+    # last resort: glob search by date/session if parseable
+    # try parse "...YYYY-MM-DD_session..."
+    stem = base.replace(".json", "")
+    parts = stem.split("_")
+    if len(parts) >= 2:
+        # if already "signals_YYYY-MM-DD_session" -> last two parts include date/session
+        date_part = None
+        session_part = None
+        if parts[0] == "signals" and len(parts) >= 3:
+            date_part = parts[1]
+            session_part = parts[2]
+        elif len(parts) >= 2:
+            # maybe "YYYY-MM-DD_close"
+            date_part = parts[0]
+            session_part = parts[1]
+
+        if date_part and session_part:
+            patt = os.path.join(signals_dir, f"signals_{date_part}_{session_part}.json")
+            hits = glob.glob(patt)
+            if hits:
+                return hits[0]
+
+    raise FileNotFoundError(
+        f"Could not resolve signal file from latest_meta. Tried: {candidates} (latest_meta={latest_meta_path})"
+    )
+
+
+def _resolve_signal_path_by_date(date_str: str, session: str, signals_dir: str) -> str:
+    expected = os.path.join(signals_dir, f"signals_{date_str}_{session}.json")
+    if os.path.exists(expected):
+        return expected
+
+    # fallback glob (buffer for any suffix variants)
+    hits = glob.glob(os.path.join(signals_dir, f"signals_{date_str}_{session}*.json"))
+    if hits:
+        # choose newest
+        hits.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+        return hits[0]
+
+    raise FileNotFoundError(f"Signal file not found: {expected}")
+
+
+def _evaluate_long_trade_1h(df_1h: pd.DataFrame, entry: float, sl: float, tp: float) -> str:
+    """
+    Evaluate long trade using 1H bars.
+    If within the same bar both SL and TP are touched, we assume SL first (conservative).
+    Returns: 'WIN' | 'LOSS' | 'OPEN'
+    """
+    if df_1h is None or df_1h.empty:
+        return "OPEN"
+
+    for _, row in df_1h.iterrows():
+        h = float(row["High"])
+        l = float(row["Low"])
+
+        hit_sl = l <= sl
+        hit_tp = h >= tp
+
+        if hit_sl and hit_tp:
+            return "LOSS"  # conservative on ambiguous bar
+        if hit_sl:
+            return "LOSS"
+        if hit_tp:
+            return "WIN"
+
+    return "OPEN"
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--latest", action="store_true")
-    parser.add_argument("--date")
-    parser.add_argument("--session", choices=["morning", "close"])
+    g = parser.add_mutually_exclusive_group(required=True)
+    g.add_argument("--latest", action="store_true", help="Use outputs/today_candidates_latest_meta.json")
+    g.add_argument("--date", help="YYYY-MM-DD (JST date)")
+
+    parser.add_argument("--session", choices=["morning", "close"], help="Required when using --date")
+    parser.add_argument("--signals_dir", default=DEFAULT_SIGNALS_DIR)
+    parser.add_argument("--results_dir", default=DEFAULT_RESULTS_DIR)
+    parser.add_argument("--latest_meta", default=DEFAULT_LATEST_META)
+
     args = parser.parse_args()
 
-    if args.latest:
-        signal_path = load_latest_signal_path()
-    else:
-        if not args.date or not args.session:
-            raise ValueError("Specify --latest OR --date and --session")
-        signal_path = find_signal_file(args.date, args.session)
+    _ensure_dir(args.results_dir)
 
-    with open(signal_path, "r", encoding="utf-8") as f:
-        signals = json.load(f)
+    # Resolve signal path
+    if args.latest:
+        signal_path = _resolve_signal_path_from_latest_meta(args.latest_meta, args.signals_dir)
+    else:
+        if not args.session:
+            raise ValueError("--session is required when using --date")
+        signal_path = _resolve_signal_path_by_date(args.date, args.session, args.signals_dir)
+
+    signals = _read_json(signal_path)
+
+    # signals schema (expected from main v3):
+    # {
+    #   "asof": "...",
+    #   "session": "...",
+    #   "candidates": [{ticker, entry, sl, tp, shares, ...}],
+    #   "market_info": {...},
+    #   "market_filter": "on/off" or bool,
+    #   ...
+    # }
+    asof = signals.get("asof", "")
+    asof_date = (asof[:10] if isinstance(asof, str) and len(asof) >= 10 else None)
+
+    # Download start: asof date is good enough for 1H confirm-based eval
+    # (If you want strict “after entry time” filtering, we can tighten later.)
+    start = asof_date or args.date
 
     results = []
-    total_pnl = 0
-    total_R = 0
+    sum_pnl = 0.0
+    sum_r = 0.0
+    n_resolved = 0
+    n_win = 0
+    n_loss = 0
 
-    for s in signals["candidates"]:
-        ticker = s["ticker"]
-        entry = s["entry"]
-        sl = s["sl"]
-        tp = s["tp"]
-        shares = s["shares"]
-        start_date = signals["asof"][:10]
+    for c in signals.get("candidates", []):
+        ticker = c["ticker"]
+        entry = float(c["entry"])
+        sl = float(c["sl"])
+        tp = float(c["tp"])
+        shares = int(c.get("shares", 0))
 
-        result = evaluate_trade(ticker, entry, sl, tp, shares, start_date)
-        if result:
-            result["ticker"] = ticker
-            results.append(result)
-            total_pnl += result["pnl_yen"]
-            total_R += result["R"]
+        # Pull 1H data
+        df = yf.download(
+            ticker,
+            start=start,
+            interval="1h",
+            auto_adjust=False,
+            progress=False,
+        )
+        df = _normalize_ohlcv(df, ticker)
 
-    out = {
-        "meta": signals.get("meta", {}),
+        outcome = _evaluate_long_trade_1h(df, entry, sl, tp)
+
+        if outcome == "WIN":
+            r = (tp - entry) / (entry - sl) if (entry - sl) != 0 else 0.0
+            pnl = (tp - entry) * shares
+            n_win += 1
+            n_resolved += 1
+        elif outcome == "LOSS":
+            r = -1.0
+            pnl = (sl - entry) * shares
+            n_loss += 1
+            n_resolved += 1
+        else:
+            r = 0.0
+            pnl = 0.0
+
+        sum_r += r
+        sum_pnl += pnl
+
+        results.append(
+            {
+                "ticker": ticker,
+                "result": outcome,
+                "R": float(r),
+                "pnl_yen": float(pnl),
+                "entry": entry,
+                "sl": sl,
+                "tp": tp,
+                "shares": shares,
+            }
+        )
+
+    # Output naming: keep stable + avoid overwrite
+    # result_YYYY-MM-DD_session_YYYYmmdd-HHMMSSZ.json
+    # If signals file name contains date/session, use it.
+    base = os.path.basename(signal_path).replace(".json", "")
+    # signals_YYYY-MM-DD_session
+    parts = base.split("_")
+    date_part = None
+    session_part = None
+    if len(parts) >= 3 and parts[0] == "signals":
+        date_part = parts[1]
+        session_part = parts[2]
+
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%SZ")
+    if date_part and session_part:
+        out_name = f"result_{date_part}_{session_part}_{ts}.json"
+        latest_name = f"result_{date_part}_{session_part}_latest.json"
+    else:
+        out_name = f"result_{ts}.json"
+        latest_name = "result_latest.json"
+
+    out_path = os.path.join(args.results_dir, out_name)
+    latest_path = os.path.join(args.results_dir, latest_name)
+
+    payload = {
+        "meta": {
+            "signal_path": signal_path,
+            "asof": asof,
+            "start": start,
+            "assumption_same_bar": "LOSS_first_if_SL_and_TP_touched_in_same_1h_bar",
+            "market_info": signals.get("market_info"),
+            "market_filter": signals.get("market_filter"),
+            "session": signals.get("session", session_part),
+        },
+        "summary": {
+            "trades_total": len(results),
+            "resolved": n_resolved,
+            "wins": n_win,
+            "losses": n_loss,
+            "win_rate_resolved": (n_win / n_resolved * 100.0) if n_resolved else 0.0,
+            "total_R": float(sum_r),
+            "total_pnl_yen": float(sum_pnl),
+        },
         "results": results,
-        "total_pnl_yen": total_pnl,
-        "total_R": total_R,
     }
 
-    out_name = os.path.basename(signal_path).replace("signals", "result")
-    out_path = os.path.join(OUTPUT_DIR, out_name)
-
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(out, f, indent=2, ensure_ascii=False)
+    _write_json(out_path, payload)
+    _write_json(latest_path, payload)
 
     print("Saved:", out_path)
+    print("Saved:", latest_path)
 
 
 if __name__ == "__main__":
