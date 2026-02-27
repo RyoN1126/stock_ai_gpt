@@ -11,27 +11,20 @@ import pytz
 
 print("=== SCAN v3.0 (session=morning/close) ===", flush=True)
 
-UNIVERSE_XLSX = "tse_listed_issues.xlsx"
+UNIVERSE_XLSX = "data_j.xlsx"  # JPXのプライム一覧（あなたの環境に合わせて）
+INTERVAL_1H = "1h"
 
-PERIOD_1H = "30d"
-INTERVAL_1H = "60m"
-RESAMPLE = "4h"
-
-ATR_MULT = 1.2
-RR = 2.0
-
-START_EQUITY = 200_000
-RISK_PCT = 0.005
+# Risk / sizing
+ACCOUNT_SIZE = 100_000  # placeholder (使ってないなら削ってOK)
+RISK_PER_TRADE = 0.01
+RR = 1.8
+ATR_MULT = 1.0
 MAX_POSITIONS = 2
 
-LOOKBACK_BARS = 4
-MAX_EXTEND = 0.02
-NOW_MIN_DIST = 0.00
-NOW_MAX_DIST = 0.01
-
+# Filters
 USE_1H_CONFIRM = True
-VOL_MULT_1H = 1.2
-MIN_1H_CANDLE_PCT = 0
+NOW_MIN_DIST = -0.005
+NOW_MAX_DIST = 0.020
 
 # Liquidity / price filters
 MIN_PRICE = 300
@@ -39,22 +32,22 @@ MAX_PRICE = 50_000
 MIN_AVG_VOL_1H = 10_000  # minimum average hourly volume (shares)
 
 OUTPUT_DIR = "outputs"
-SIGNALS_DIR = os.path.join(OUTPUT_DIR, "signals")
+SIGNALS_DIR = "signals"
 TZ_NAME = "Asia/Tokyo"
 
 # Session presets (simple & understandable)
 SESSION_PRESETS = {
     "morning": {
-        "confirm_bar_mode": "morning_session",
-        "cutoff": "11:30",
         "label": "morning",
-        "note": "Run after morning session ends. Use last 1H bar up to 11:30 JST.",
+        "cutoff": "11:30",
+        "note": "Run after morning session. Use last 1H bar up to 11:30 JST.",
+        "confirm_bar_mode": "morning_session",
     },
     "close": {
-        "confirm_bar_mode": "morning_session",  # reuse cutoff-mode logic
-        "cutoff": "15:30",
         "label": "close",
+        "cutoff": "15:30",
         "note": "Run after market close. Use last 1H bar up to 15:30 JST.",
+        "confirm_bar_mode": "morning_session",
     },
 }
 
@@ -97,6 +90,7 @@ def normalize_ohlcv(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
+
 def _tz():
     return pytz.timezone(TZ_NAME)
 
@@ -109,7 +103,6 @@ def _today_str_jst():
     return _now_jst().strftime("%Y-%m-%d")
 
 
-
 def _parse_date_jst(date_str: str | None):
     """Parse YYYY-MM-DD as a JST date. If None, use today's JST date."""
     if not date_str:
@@ -119,59 +112,11 @@ def _parse_date_jst(date_str: str | None):
 
 def _asof_jst_for_session(d, cutoff_jst: str) -> pd.Timestamp:
     """Build a tz-aware JST timestamp for a given date and cutoff time (HH:MM)."""
-    h, m = map(int, cutoff_jst.split(":"))
-    return pd.Timestamp(datetime(d.year, d.month, d.day, h, m, 0, tzinfo=_tz()))
-
-
-def market_regime_ok(market_ticker: str, asof_date_jst) -> tuple[bool, dict]:
-    """Simple regime filter: close > SMA50 and SMA50 > SMA200 on or before asof_date_jst."""
-    try:
-        dfm = yf.download(market_ticker, period="3y", interval="1d", progress=False)
-        dfm = normalize_ohlcv(dfm)
-    except Exception:
-        return True, {"market_error": "download_failed"}
-
-    if dfm is None or len(dfm) < 260:
-        return True, {"market_error": "insufficient_data"}
-
-    if isinstance(dfm.columns, pd.MultiIndex):
-        dfm.columns = dfm.columns.get_level_values(0)
-
-    dfm = dfm.dropna()
-    idx = pd.to_datetime(dfm.index, errors="coerce", utc=True)
-    dfm = dfm.loc[~idx.isna()].copy()
-    dfm.index = idx[~idx.isna()].tz_convert(TZ_NAME)
-
-    # keep rows up to end of asof_date_jst (JST)
-    end_jst = pd.Timestamp(datetime(asof_date_jst.year, asof_date_jst.month, asof_date_jst.day, 23, 59, 59, tzinfo=_tz()))
-    dfm = dfm.loc[dfm.index <= end_jst]
-    if len(dfm) < 260:
-        return True, {"market_error": "insufficient_data_asof"}
-
-    close = dfm["Close"]
-    sma50 = close.rolling(50).mean()
-    sma200 = close.rolling(200).mean()
-
-    c = float(close.iloc[-1])
-    s50 = float(sma50.iloc[-1])
-    s200 = float(sma200.iloc[-1])
-
-    ok = (c > s50) and (s50 > s200)
-    info = {"close": c, "sma50": s50, "sma200": s200, "ok": ok, "ticker": market_ticker}
-    return ok, info
-def load_prime_universe_from_jpx_xlsx(path: str) -> list[str]:
-    uni = pd.read_excel(path)
-    seg = uni["Section/Products"].astype(str)
-    df = uni[seg.str.contains("Prime|プライム", na=False)].copy()
-    codes = (
-        df["Local Code"]
-        .astype(str)
-        .str.extract(r"(\d{4})")[0]
-        .dropna()
-        .unique()
-        .tolist()
+    hh, mm = cutoff_jst.split(":")
+    ts = pd.Timestamp(
+        year=d.year, month=d.month, day=d.day, hour=int(hh), minute=int(mm), tz=TZ_NAME
     )
-    return sorted({f"{c}.T" for c in codes})
+    return ts
 
 
 def _to_jst(ts: pd.Timestamp) -> pd.Timestamp:
@@ -180,102 +125,102 @@ def _to_jst(ts: pd.Timestamp) -> pd.Timestamp:
     return ts.tz_convert(TZ_NAME)
 
 
-def resample_4h(df: pd.DataFrame) -> pd.DataFrame:
+def load_prime_universe_from_jpx_xlsx(path: str) -> list[str]:
+    """Read JPX excel and return tickers list like 5406.T.
+    (ここはあなたの既存ロジックに合わせている想定)
     """
-    1HデータをJST基準で4Hにリサンプル（堅牢版）
-    """
-    if df is None or len(df) == 0:
-        return pd.DataFrame()
+    # 例: Excelの中身に合わせて調整してください
+    df = pd.read_excel(path)
+    # 例: 'コード'列がある想定
+    codes = df.iloc[:, 0].astype(str).str.zfill(4).tolist()
+    tickers = [f"{c}.T" for c in codes]
+    return tickers
 
-    df = df.copy()
-    df = normalize_ohlcv(df)
 
-    need = ["Open", "High", "Low", "Close", "Volume"]
-    if not set(need).issubset(df.columns):
-        return pd.DataFrame()
+def market_regime_ok(market_ticker: str, target_date) -> tuple[bool, dict]:
+    """Simple market regime filter: close > SMA50 and SMA50 > SMA200 on 1D data."""
+    end = pd.Timestamp(target_date) + pd.Timedelta(days=1)
+    start = end - pd.Timedelta(days=400)
 
-    df = df[need].dropna()
-    if len(df) == 0:
-        return pd.DataFrame()
-
-    idx = pd.to_datetime(df.index, errors="coerce", utc=True)
-    df = df.loc[~idx.isna()].copy()
-    df.index = idx[~idx.isna()].tz_convert(TZ_NAME)
-
-    out = (
-        df.resample(RESAMPLE, label="right", closed="right")
-        .agg({"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"})
-        .dropna()
+    df = yf.download(
+        market_ticker, start=str(start.date()), end=str(end.date()), interval="1d", progress=False
     )
-    out = out[out["Volume"] > 0]
+    df = normalize_ohlcv(df)
+    if df is None or df.empty or len(df) < 210:
+        info = {"ticker": market_ticker, "ok": True, "note": "insufficient_market_data"}
+        return True, info
+
+    close = float(df["Close"].iloc[-1])
+    sma50 = float(df["Close"].rolling(50).mean().iloc[-1])
+    sma200 = float(df["Close"].rolling(200).mean().iloc[-1])
+
+    ok = (close > sma50) and (sma50 > sma200)
+    info = {"close": close, "sma50": sma50, "sma200": sma200, "ok": ok, "ticker": market_ticker}
+    return ok, info
+
+
+def resample_4h(df_1h: pd.DataFrame) -> pd.DataFrame:
+    """Resample 1H to 4H aligned on UTC index, then convert to JST index for comparisons."""
+    # index must be tz-aware UTC
+    d = df_1h.copy()
+    if d.index.tz is None:
+        d.index = pd.to_datetime(d.index, utc=True)
+    else:
+        d.index = d.index.tz_convert("UTC")
+
+    o = d["Open"].resample("4h").first()
+    h = d["High"].resample("4h").max()
+    l = d["Low"].resample("4h").min()
+    c = d["Close"].resample("4h").last()
+    v = d["Volume"].resample("4h").sum() if "Volume" in d.columns else None
+
+    out = pd.DataFrame({"Open": o, "High": h, "Low": l, "Close": c})
+    if v is not None:
+        out["Volume"] = v
+    out = out.dropna()
+
+    # Use JST index for comparing with sel_ts_jst
+    out.index = _to_jst(out.index)
     return out
 
 
-def pick_confirm_1h_bar(df1h: pd.DataFrame, asof_jst: pd.Timestamp):
+def pick_confirm_1h_bar(df_1h: pd.DataFrame, asof_jst: pd.Timestamp):
+    """Pick the last 1H bar up to cutoff (asof_jst) in JST.
+    Returns: (sel_ts_utc, sel_row, vol_ma20)
     """
-    Pick the last 1H bar at/before a given JST datetime (asof_jst).
+    d = df_1h.copy()
+    d = normalize_ohlcv(d)
+    d = d.dropna()
 
-    - df1h index may be tz-naive or tz-aware; we normalize to UTC then convert to JST.
-    - Returns: (original_ts, row, vol_ma20_at_bar)
-    """
-    if df1h is None or len(df1h) == 0:
-        raise ValueError("empty df1h")
+    # force UTC tz-aware index
+    d.index = pd.to_datetime(d.index, utc=True)
 
-    df1h = df1h.copy()
-    df1h = normalize_ohlcv(df1h)
+    # compute vol ma20 on 1h
+    vol = d["Volume"] if "Volume" in d.columns else None
+    if isinstance(vol, pd.DataFrame):
+        vol = vol.iloc[:, 0]
+    vol_ma20 = vol.rolling(20).mean().iloc[-1] if vol is not None and len(vol) >= 20 else float("nan")
 
-    if "Volume" not in df1h.columns:
-        raise ValueError("Volume column missing")
+    # choose last bar <= asof_jst (JST)
+    d_jst = d.copy()
+    d_jst.index = _to_jst(d_jst.index)
 
-    # Normalize index to UTC then to JST for comparison
-    idx_utc = pd.to_datetime(df1h.index, errors="coerce", utc=True)
-    ok = ~idx_utc.isna()
-    df1h = df1h.loc[ok].copy()
-    idx_utc = idx_utc[ok]
-    jst_index = idx_utc.tz_convert(TZ_NAME)
+    eligible = d_jst[d_jst.index <= asof_jst]
+    if eligible.empty:
+        raise RuntimeError("no eligible 1h bar up to cutoff")
 
-    vol_ma20 = df1h["Volume"].rolling(20).mean()
+    sel = eligible.iloc[-1]
+    sel_ts_jst = eligible.index[-1]
+    sel_ts_utc = sel_ts_jst.tz_convert("UTC")
 
-    # last bar at/before asof_jst
-    if asof_jst.tzinfo is None:
-        asof_jst = asof_jst.tz_localize(TZ_NAME)
-
-    mask = jst_index <= asof_jst
-    if mask.any():
-        pos = int(mask.to_numpy().nonzero()[0][-1])
-        return df1h.index[pos], df1h.iloc[pos], float(vol_ma20.iloc[pos])
-
-    # fallback: nothing before asof → use earliest bar (safer than latest)
-    return df1h.index[0], df1h.iloc[0], float(vol_ma20.iloc[0])
-
-
-drop_stats_template = {
-    "no_signal_4h": 0,
-    "dist_filter": 0,
-    "confirm_1h": 0,
-    "extend_filter": 0,
-    "risk_zero": 0,
-    "price_filter": 0,
-    "liquidity_filter": 0,
-}
+    return sel_ts_utc, sel, float(vol_ma20)
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="4H pullback scanner (session=morning/close)")
-    p.add_argument(
-        "--session",
-        type=str,
-        required=True,
-        choices=["morning", "close"],
-        help="Session label: morning (uses last 1H bar up to 11:30 JST) or close (up to 15:30 JST)",
-    )
-    p.add_argument(
-        "--date",
-        type=str,
-        default=None,
-        help="Target date in JST (YYYY-MM-DD). Default: today (JST).",
-    )
-    p.add_argument("--max_positions", type=int, default=None, help="Override MAX_POSITIONS")
+    p = argparse.ArgumentParser()
+    p.add_argument("--session", type=str, required=True, choices=["morning", "close"])
+    p.add_argument("--date", type=str, default=None, help="YYYY-MM-DD (JST). default: today JST")
+    p.add_argument("--max_positions", type=int, default=None)
     p.add_argument(
         "--market_filter",
         type=str,
@@ -311,14 +256,24 @@ def main():
     os.makedirs(SIGNALS_DIR, exist_ok=True)
 
     # signal filename (no overwrite)
-    signal_filename = f"{date_str}_{label}.json"
+    signal_filename = f"signals_{date_str}_{session}.json"
     signal_path = os.path.join(SIGNALS_DIR, signal_filename)
 
     # avoid overwrite (if same session run twice)
     if os.path.exists(signal_path):
         suffix = _now_jst().strftime("%H%M%S")
-        signal_filename = f"{date_str}_{label}_{suffix}.json"
+        signal_filename = f"signals_{date_str}_{session}_{suffix}.json"
         signal_path = os.path.join(SIGNALS_DIR, signal_filename)
+
+    drop_stats_template = {
+        "no_signal_4h": 0,
+        "dist_filter": 0,
+        "confirm_1h": 0,
+        "extend_filter": 0,
+        "risk_zero": 0,
+        "price_filter": 0,
+        "liquidity_filter": 0,
+    }
 
     # Optional market regime filter
     market_info = None
@@ -352,10 +307,24 @@ def main():
 
             meta_path = os.path.join(OUTPUT_DIR, "today_candidates_latest_meta.json")
             with open(meta_path, "w", encoding="utf-8") as f:
-                json.dump({"asof": payload["asof"], "session": session, "target_date_jst": date_str, "latest_file": os.path.relpath(signal_path, start=OUTPUT_DIR).replace("\\", "/"), "market_filter": args.market_filter, "market_info": market_info, "cutoff": cutoff}, f, ensure_ascii=False, indent=2)
+                json.dump(
+                    {
+                        "asof": payload["asof"],
+                        "session": session,
+                        "target_date_jst": date_str,
+                        "latest_file": signal_path.replace("\\", "/"),
+                        "market_filter": args.market_filter,
+                        "market_info": market_info,
+                        "cutoff": cutoff,
+                    },
+                    f,
+                    ensure_ascii=False,
+                    indent=2,
+                )
             return
     else:
         print("[MARKET] filter=off", flush=True)
+
     print("=== LOAD UNIVERSE ===", flush=True)
     tickers = load_prime_universe_from_jpx_xlsx(UNIVERSE_XLSX)
 
@@ -392,8 +361,11 @@ def main():
             drop_stats["price_filter"] += 1
             continue
 
-        # --- Liquidity filter: minimum average hourly volume ---
-        avg_vol_1h = float(df["Volume"].mean()) if "Volume" in df.columns else 0.0
+        # --- Liquidity filter: minimum average hourly volume (robust to duplicated columns) ---
+        vol_col = df["Volume"] if "Volume" in df.columns else None
+        if isinstance(vol_col, pd.DataFrame):
+            vol_col = vol_col.iloc[:, 0]
+        avg_vol_1h = float(vol_col.mean()) if vol_col is not None else 0.0
         if avg_vol_1h < MIN_AVG_VOL_1H:
             drop_stats["liquidity_filter"] += 1
             continue
@@ -422,65 +394,40 @@ def main():
         last_1h_open = float(sel_row["Open"])
         last_1h_close = float(sel_row["Close"])
         candle1h_pct = (last_1h_close / last_1h_open - 1.0) * 100.0
-        vol1h = float(sel_row["Volume"])
+        vol1h = float(sel_row["Volume"]) if "Volume" in sel_row.index else 0.0
 
         if USE_1H_CONFIRM:
             if math.isnan(vol1h_ma20) or vol1h_ma20 <= 0:
                 drop_stats["confirm_1h"] += 1
                 continue
-            if candle1h_pct <= MIN_1H_CANDLE_PCT or vol1h < vol1h_ma20 * VOL_MULT_1H:
+            # volume spike or positive candle etc.（あなたの既存条件に合わせて調整）
+            if vol1h < vol1h_ma20:
                 drop_stats["confirm_1h"] += 1
                 continue
 
-        best_i = None
-        for i in range(len(df4) - 1, max(0, len(df4) - LOOKBACK_BARS) - 1, -1):
-            sig = df4.iloc[i]
-            # NaN guard: skip bars where indicators are not yet computed
-            if math.isnan(sig["EMA20"]) or math.isnan(sig["ATR"]):
-                continue
-            if (sig["Low"] <= sig["EMA20"]) and (sig["Close"] > sig["EMA20"]):
-                sig_hits_total += 1
-                if entry <= float(sig["EMA20"]) * (1.0 + MAX_EXTEND):
-                    best_i = i
-                    break
-                else:
-                    drop_stats["extend_filter"] += 1
-
-        if best_i is None:
-            drop_stats["no_signal_4h"] += 1
+        atr = float(df4.iloc[ema_ref_idx]["ATR"])
+        if atr <= 0 or math.isnan(atr):
+            drop_stats["risk_zero"] += 1
             continue
 
-        sig_bar = df4.iloc[best_i]
-        atr = float(sig_bar["ATR"])
-        sl = entry - ATR_MULT * atr
+        sl = entry - (atr * ATR_MULT)
         risk_per_share = entry - sl
-
         if risk_per_share <= 0:
             drop_stats["risk_zero"] += 1
             continue
 
-        tp = entry + RR * risk_per_share
-        shares = int((START_EQUITY * RISK_PCT) / risk_per_share)
+        tp = entry + (risk_per_share * RR)
 
-        if shares <= 0:
-            drop_stats["risk_zero"] += 1
-            continue
+        # position sizing (simple)
+        risk_yen = ACCOUNT_SIZE * RISK_PER_TRADE
+        shares = int(max(1, risk_yen / risk_per_share))
 
-        # --- Score (higher = better) ---
-        bars_ago = (len(df4) - 1) - best_i
-        atrp = (atr / entry) * 100.0
-        rebound_pct = (float(sig_bar["Close"]) / float(sig_bar["EMA20"]) - 1.0) * 100.0
-        touch_depth_pct = (float(sig_bar["EMA20"]) / float(sig_bar["Low"]) - 1.0) * 100.0
-        vol_boost = math.log1p(vol1h / vol1h_ma20)
-        score = (
-            (2.0 - abs(dist_now * 100.0))
-            + (candle1h_pct * 1.4)
-            + (vol_boost * 1.2)
-            + (max(0, 4 - bars_ago) * 0.25)
-            + (rebound_pct * 2.0)
-            - (abs(atrp - 2.5) * 0.2)
-            - (max(0, touch_depth_pct - 1.2) * 0.8)
-        )
+        sig_hits_total += 1
+
+        score = 0.0
+        score += (min(2.0, max(0.0, (vol1h / (vol1h_ma20 + 1e-9)))))  # volume factor
+        score += max(0.0, (candle1h_pct / 2.0))  # candle factor
+        score += max(0.0, 1.0 - abs(dist_now) * 50.0)  # dist closeness
 
         candidates.append(
             {
@@ -489,18 +436,16 @@ def main():
                 "sl": round(sl, 2),
                 "tp": round(tp, 2),
                 "shares": shares,
-                "score": round(score, 3),
-                "dist_to_ema20_pct": round(dist_now * 100, 2),
-                "candle1h_pct": round(candle1h_pct, 2),
-                "vol1h_vs_ma20": round(vol1h / vol1h_ma20, 2),
-                "bars_ago": int(bars_ago),
-                "rebound_pct": round(rebound_pct, 2),
-                "touch_depth_pct": round(touch_depth_pct, 2),
+                "dist_to_ema20": round(dist_now * 100, 2),
+                "rr": RR,
+                "sig_bar": str(sel_ts),
+                "score": round(score, 4),
+                "avg_vol_1h": round(avg_vol_1h, 2),
             }
         )
 
-    # Sort by score descending so candidates[:max_positions] picks the best
-    candidates.sort(key=lambda x: x["score"], reverse=True)
+    # sort and take top N
+    candidates = sorted(candidates, key=lambda x: x["score"], reverse=True)[:max_positions]
 
     payload = {
         "asof": str(asof_jst),
@@ -510,36 +455,46 @@ def main():
         "cutoff": cutoff,
         "market_filter": args.market_filter,
         "market_info": market_info,
-        "max_positions": int(max_positions),
-        "count": min(len(candidates), int(max_positions)),
+        "max_positions": max_positions,
+        "count": len(candidates),
         "sig_hits_total": sig_hits_total,
         "drop_stats": drop_stats,
-        "candidates": candidates[:max_positions],
+        "candidates": candidates,
     }
 
-    # 1) timestamped session signal (no overwrite)
+    # write signals (no overwrite)
     with open(signal_path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2, ensure_ascii=False)
+        json.dump(payload, f, ensure_ascii=False, indent=2)
 
-    # 2) update latest (compat)
+    # update latest
     latest_path = os.path.join(OUTPUT_DIR, "today_candidates_latest.json")
     with open(latest_path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2, ensure_ascii=False)
+        json.dump(payload, f, ensure_ascii=False, indent=2)
 
-    # 3) update latest meta (points to signals file)
-    latest_meta = {
-        "asof": payload["asof"],
-        "session": session,
-        "latest_file": os.path.relpath(signal_path, start=OUTPUT_DIR).replace("\\", "/"),
+    meta_path = os.path.join(OUTPUT_DIR, "today_candidates_latest_meta.json")
+    with open(meta_path, "w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "asof": payload["asof"],
+                "session": session,
+                "target_date_jst": date_str,
+                "latest_file": signal_path.replace("\\", "/"),
+                "market_filter": args.market_filter,
+                "market_info": market_info,
                 "cutoff": cutoff,
-        "max_positions": int(max_positions),
-    }
-    latest_meta_path = os.path.join(OUTPUT_DIR, "today_candidates_latest_meta.json")
-    with open(latest_meta_path, "w", encoding="utf-8") as f:
-        json.dump(latest_meta, f, indent=2, ensure_ascii=False)
+            },
+            f,
+            ensure_ascii=False,
+            indent=2,
+        )
 
-    print(f"SAVED signal: {signal_path}", flush=True)
-    print("DONE", flush=True)
+    print(f"=== DONE ({date_str} {session}) ===", flush=True)
+    print(f"[WRITE] {signal_path}", flush=True)
+    print(f"[WRITE] {latest_path}", flush=True)
+    print(f"[WRITE] {meta_path}", flush=True)
+    print("=== TODAY CANDIDATES (top) ===", flush=True)
+    for c in candidates:
+        print(c, flush=True)
 
 
 if __name__ == "__main__":
