@@ -1,144 +1,132 @@
-name: Stock Pipeline (scan AM/PM, eval nightly)
+name: Stock Scan Pipeline
 
 on:
   schedule:
-    # JST 11:45 = UTC 02:45 (morning scan)
-    - cron: "45 2 * * 1-5"
-    # JST 16:00 = UTC 07:00 (close scan)
-    - cron: "0 7 * * 1-5"
-    # JST 21:30 = UTC 12:30 (nightly: evaluate + aggregate)
-    - cron: "30 12 * * 1-5"
+    # 前場終了後（11:35 JST = 02:35 UTC）
+    - cron: "35 2 * * 1-5"
+    # 引け後（15:35 JST = 06:35 UTC）
+    - cron: "35 6 * * 1-5"
 
   workflow_dispatch:
     inputs:
-      task:
-        description: "Manual task to run"
+      session:
+        description: "morning or close"
         required: true
-        default: morning
-        type: choice
-        options:
-          - morning
-          - close
-          - evaluate
-          - aggregate
-          - eval_and_aggregate
-
-permissions:
-  contents: write   # dataブランチへpushするため
+        default: "close"
+      date:
+        description: "YYYY-MM-DD (JST, optional)"
+        required: false
+        default: ""
 
 jobs:
   run:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout main (code)
+      # =========================
+      # Checkout
+      # =========================
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-          persist-credentials: true
 
+      # =========================
+      # Setup Python
+      # =========================
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
+      # =========================
+      # Install dependencies
+      # =========================
       - name: Install dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # ---- Decide TASK ----
-      - name: Decide task (schedule vs manual)
+      # =========================
+      # Decide session (scheduled)
+      # =========================
+      - name: Decide session (scheduled only)
+        if: github.event_name == 'schedule'
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "TASK=${{ inputs.task }}" >> $GITHUB_ENV
-            echo "TRIGGER=manual" >> $GITHUB_ENV
-            echo "SCHEDULED_CRON=manual" >> $GITHUB_ENV
+          HOUR=$(date -u +"%H")
+          if [ "$HOUR" = "02" ]; then
+            echo "SESSION=morning" >> $GITHUB_ENV
           else
-            CRON="${{ github.event.schedule }}"
-            echo "TRIGGER=schedule" >> $GITHUB_ENV
-            echo "SCHEDULED_CRON=$CRON" >> $GITHUB_ENV
-
-            if [ "$CRON" = "45 2 * * 1-5" ]; then
-              echo "TASK=morning" >> $GITHUB_ENV
-            elif [ "$CRON" = "0 7 * * 1-5" ]; then
-              echo "TASK=close" >> $GITHUB_ENV
-            else
-              echo "TASK=eval_and_aggregate" >> $GITHUB_ENV
-            fi
+            echo "SESSION=close" >> $GITHUB_ENV
           fi
 
-      - name: Show task
+      # =========================
+      # Manual dispatch inputs
+      # =========================
+      - name: Set session/date (manual dispatch)
+        if: github.event_name == 'workflow_dispatch'
         run: |
-          echo "TRIGGER=${TRIGGER}"
-          echo "SCHEDULED_CRON=${SCHEDULED_CRON}"
-          echo "TASK=${TASK}"
+          echo "SESSION=${{ inputs.session }}" >> $GITHUB_ENV
+          echo "INPUT_DATE=${{ inputs.date }}" >> $GITHUB_ENV
 
-      # ---- Ensure outputs (artifact guard) ----
-      - name: Ensure outputs exist
+      # =========================
+      # Run scanner
+      # =========================
+      - name: Run scanner
         run: |
-          mkdir -p outputs/signals outputs/results outputs/aggregates
-          # 空だと artifact が作られないのでプレースホルダを置く
-          touch outputs/.keep
-
-      # ---- Run scan ----
-      - name: Run scan (morning)
-        if: env.TASK == 'morning'
-        run: |
-          python main.py --session morning
-
-      - name: Run scan (close)
-        if: env.TASK == 'close'
-        run: |
-          python main.py --session close
-
-      # ---- Run evaluate / aggregate ----
-      - name: Run evaluate
-        if: env.TASK == 'evaluate' || env.TASK == 'eval_and_aggregate'
-        run: |
-          python evaluate_results.py --latest || true
-
-      - name: Run aggregate
-        if: env.TASK == 'aggregate' || env.TASK == 'eval_and_aggregate'
-        run: |
-          python aggregate.py || true
-
-      # ---- Persist outputs to data branch ----
-      - name: Persist outputs to data branch
-        run: |
-          set -e
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # dataブランチを取得（無ければ作る）
-          git fetch origin data || true
-
-          if git show-ref --quiet refs/remotes/origin/data; then
-            git checkout -B data origin/data
+          if [ -n "$INPUT_DATE" ]; then
+            python main.py --session $SESSION --date $INPUT_DATE
           else
-            git checkout --orphan data
-            git rm -rf . || true
-            mkdir -p outputs/signals outputs/results outputs/aggregates
-            echo "# outputs storage branch" > README.md
-            touch outputs/.keep
-            git add README.md outputs
-            git commit -m "init data branch"
+            python main.py --session $SESSION
           fi
 
-          # outputs をコミット（変更があるときだけ）
-          git add outputs || true
-          if git diff --cached --quiet; then
-            echo "No outputs changes to commit."
-          else
-            git commit -m "update outputs (${TASK}) $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-            git push origin data
-          fi
+      # =========================
+      # Evaluate latest signals
+      # =========================
+      - name: Evaluate latest
+        run: |
+          python evaluate_results.py --latest
 
-      # ---- Upload artifact (7 days) ----
-      - name: Upload outputs artifact (7 days)
+      # =========================
+      # Aggregate results
+      # =========================
+      - name: Aggregate
+        run: |
+          python aggregate.py --all
+
+      # =========================
+      # Read meta for artifact naming
+      # =========================
+      - name: Read run meta
+        run: |
+          python - << 'PY'
+          import json, os
+          meta_path = "outputs/today_candidates_latest_meta.json"
+          if not os.path.exists(meta_path):
+              print("latest_meta not found:", meta_path)
+              raise SystemExit(1)
+
+          m = json.load(open(meta_path, "r", encoding="utf-8"))
+          latest = m.get("latest_file", "")
+          base = os.path.basename(latest)
+
+          # signals_YYYY-MM-DD_session.json
+          parts = base.replace(".json","").split("_")
+          date = parts[1] if len(parts) >= 3 else "unknown-date"
+          sess = parts[2] if len(parts) >= 3 else "unknown-session"
+
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
+              f.write(f"RUN_DATE={date}\n")
+              f.write(f"RUN_SESSION={sess}\n")
+          PY
+
+      # =========================
+      # Upload artifacts (session+date)
+      # =========================
+      - name: Upload outputs
         uses: actions/upload-artifact@v4
         with:
-          name: outputs-${{ env.TRIGGER }}-${{ env.TASK }}
-          path: outputs/
-          retention-days: 7
+          name: stock-output-${{ env.RUN_DATE }}-${{ env.RUN_SESSION }}-run${{ github.run_number }}
+          path: |
+            signals/**
+            outputs/**
+            results/**
+          if-no-files-found: warn
