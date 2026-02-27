@@ -2,7 +2,7 @@ import os
 import json
 import glob
 import argparse
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import pandas as pd
 import yfinance as yf
@@ -123,61 +123,67 @@ def _resolve_signal_path_from_latest_meta(latest_meta_path: str, signals_dir: st
             hits = glob.glob(patt)
             if hits:
                 hits.sort(key=lambda p: os.path.getmtime(p), reverse=True)
-                return hits[0]
+                candidates.append(hits[0])
 
-    # 7) try candidates directly
     for p in candidates:
         if p and os.path.exists(p):
             return p
 
-    # 8) FINAL SAFETY NET: pick most recent signals file
-    all_signals = glob.glob(os.path.join(signals_dir, "*.json"))
-    if all_signals:
-        all_signals.sort(key=lambda p: os.path.getmtime(p), reverse=True)
-        return all_signals[0]
-
     raise FileNotFoundError(
-        f"Could not resolve signal file from latest_meta. Tried: {candidates} "
-        f"(latest_meta={latest_meta_path}) and no signals found in {signals_dir}/"
+        "Could not resolve signals file from latest_meta. Tried:\n" + "\n".join(candidates)
     )
 
-def _resolve_signal_path_by_date(date_str: str, session: str, signals_dir: str) -> str:
-    expected = os.path.join(signals_dir, f"signals_{date_str}_{session}.json")
-    if os.path.exists(expected):
-        return expected
 
-    # fallback glob (buffer for any suffix variants)
-    hits = glob.glob(os.path.join(signals_dir, f"signals_{date_str}_{session}*.json"))
+def _resolve_signal_path_from_date_session(signals_dir: str, date_str: str, session: str) -> str:
+    # prefer exact match
+    exact = os.path.join(signals_dir, f"signals_{date_str}_{session}.json")
+    if os.path.exists(exact):
+        return exact
+
+    # fallback: glob any suffix version
+    patt = os.path.join(signals_dir, f"signals_{date_str}_{session}_*.json")
+    hits = glob.glob(patt)
     if hits:
-        # choose newest
         hits.sort(key=lambda p: os.path.getmtime(p), reverse=True)
         return hits[0]
 
-    raise FileNotFoundError(f"Signal file not found: {expected}")
+    raise FileNotFoundError(f"No signals file found for {date_str} {session} in {signals_dir}")
 
 
-def _evaluate_long_trade_1h(df_1h: pd.DataFrame, entry: float, sl: float, tp: float) -> str:
+def _evaluate_long_trade_1h(df: pd.DataFrame, entry: float, sl: float, tp: float) -> str:
     """
-    Evaluate long trade using 1H bars.
-    If within the same bar both SL and TP are touched, we assume SL first (conservative).
-    Returns: 'WIN' | 'LOSS' | 'OPEN'
+    Minimal evaluation:
+    - If within a 1H bar, both SL and TP are touched, assume LOSS first (conservative).
+    - Otherwise, first touch decides outcome.
+    - If neither touched, return OPEN.
+    Note: this does NOT check whether entry was hit (future improvement: NOT_FILLED).
     """
-    if df_1h is None or df_1h.empty:
+    if df is None or df.empty:
         return "OPEN"
 
-    for _, row in df_1h.iterrows():
-        h = float(row["High"])
-        l = float(row["Low"])
+    # Use High/Low if present, otherwise Close-only fallback
+    has_hl = ("High" in df.columns) and ("Low" in df.columns)
 
-        hit_sl = l <= sl
-        hit_tp = h >= tp
+    for _, row in df.iterrows():
+        if has_hl:
+            hi = float(row["High"])
+            lo = float(row["Low"])
 
-        if hit_sl and hit_tp:
-            return "LOSS"  # conservative on ambiguous bar
-        if hit_sl:
-            return "LOSS"
-        if hit_tp:
-            return "WIN"
+            touched_sl = lo <= sl
+            touched_tp = hi >= tp
+
+            if touched_sl and touched_tp:
+                return "LOSS"
+            if touched_sl:
+                return "LOSS"
+            if touched_tp:
+                return "WIN"
+        else:
+            close = float(row["Close"])
+            if close <= sl:
+                return "LOSS"
+            if close >= tp:
+                return "WIN"
 
     return "OPEN"
 
@@ -192,36 +198,51 @@ def main():
     parser.add_argument("--signals_dir", default=DEFAULT_SIGNALS_DIR)
     parser.add_argument("--results_dir", default=DEFAULT_RESULTS_DIR)
     parser.add_argument("--latest_meta", default=DEFAULT_LATEST_META)
+    parser.add_argument(
+        "--hold_days",
+        type=int,
+        default=5,
+        help="Max holding window in days for evaluation (prevents future-leak when backfilling).",
+    )
 
     args = parser.parse_args()
 
     _ensure_dir(args.results_dir)
 
-    # Resolve signal path
     if args.latest:
         signal_path = _resolve_signal_path_from_latest_meta(args.latest_meta, args.signals_dir)
     else:
         if not args.session:
             raise ValueError("--session is required when using --date")
-        signal_path = _resolve_signal_path_by_date(args.date, args.session, args.signals_dir)
+        signal_path = _resolve_signal_path_from_date_session(args.signals_dir, args.date, args.session)
 
     signals = _read_json(signal_path)
 
-    # signals schema (expected from main v3):
-    # {
-    #   "asof": "...",
-    #   "session": "...",
-    #   "candidates": [{ticker, entry, sl, tp, shares, ...}],
-    #   "market_info": {...},
-    #   "market_filter": "on/off" or bool,
-    #   ...
-    # }
     asof = signals.get("asof", "")
     asof_date = (asof[:10] if isinstance(asof, str) and len(asof) >= 10 else None)
 
-    # Download start: asof date is good enough for 1H confirm-based eval
-    # (If you want strict “after entry time” filtering, we can tighten later.)
+    # Download start: asof date is good enough for 1H confirm-based eval.
+    # IMPORTANT: When backfilling, we MUST prevent future-leak by limiting the evaluation window.
     start = asof_date or args.date
+
+    # Evaluation window end (exclusive date for yfinance)
+    # asof is expected to be tz-aware like "2026-02-27 15:30:00+09:00"
+    asof_ts_utc = None
+    eval_end_utc = None
+    end_date = None
+    if isinstance(asof, str) and asof:
+        try:
+            asof_ts = pd.Timestamp(asof)
+            if asof_ts.tzinfo is None:
+                asof_ts = asof_ts.tz_localize("Asia/Tokyo")
+            asof_ts_utc = asof_ts.tz_convert("UTC")
+            eval_end_utc = asof_ts_utc + pd.Timedelta(days=int(args.hold_days))
+            # yfinance 'end' is exclusive; add small buffer so late bars aren't truncated
+            end_date = (eval_end_utc + pd.Timedelta(days=2)).date().isoformat()
+        except Exception:
+            asof_ts_utc = None
+            eval_end_utc = None
+            end_date = None
 
     results = []
     sum_pnl = 0.0
@@ -241,11 +262,18 @@ def main():
         df = yf.download(
             ticker,
             start=start,
+            end=end_date,  # prevent future-leak
             interval="1h",
             auto_adjust=False,
             progress=False,
         )
         df = _normalize_ohlcv(df, ticker)
+
+        # Secondary guard: hard-filter by UTC timestamps
+        if df is not None and not df.empty and asof_ts_utc is not None:
+            df = df[df.index >= asof_ts_utc]
+            if eval_end_utc is not None:
+                df = df[df.index <= eval_end_utc]
 
         outcome = _evaluate_long_trade_1h(df, entry, sl, tp)
 
@@ -281,7 +309,6 @@ def main():
 
     # Output naming: keep stable + avoid overwrite
     # result_YYYY-MM-DD_session_YYYYmmdd-HHMMSSZ.json
-    # If signals file name contains date/session, use it.
     base = os.path.basename(signal_path).replace(".json", "")
     # signals_YYYY-MM-DD_session
     parts = base.split("_")
@@ -292,43 +319,38 @@ def main():
         session_part = parts[2]
 
     ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%SZ")
-    if date_part and session_part:
-        out_name = f"result_{date_part}_{session_part}_{ts}.json"
-        latest_name = f"result_{date_part}_{session_part}_latest.json"
-    else:
-        out_name = f"result_{ts}.json"
-        latest_name = "result_latest.json"
-
+    out_name = f"result_{date_part or (asof_date or 'unknown')}_{session_part or (signals.get('session','na'))}_{ts}.json"
     out_path = os.path.join(args.results_dir, out_name)
-    latest_path = os.path.join(args.results_dir, latest_name)
 
-    payload = {
-        "meta": {
-            "signal_path": signal_path,
-            "asof": asof,
-            "start": start,
-            "assumption_same_bar": "LOSS_first_if_SL_and_TP_touched_in_same_1h_bar",
-            "market_info": signals.get("market_info"),
-            "market_filter": signals.get("market_filter"),
-            "session": signals.get("session", session_part),
+    meta = {
+        "signal_path": signal_path.replace("\\", "/"),
+        "asof": asof,
+        "start": start,
+        "end": end_date,
+        "hold_days": int(args.hold_days),
+        "eval_window_utc": {
+            "asof_utc": (asof_ts_utc.isoformat() if asof_ts_utc is not None else None),
+            "end_utc": (eval_end_utc.isoformat() if eval_end_utc is not None else None),
         },
-        "summary": {
-            "trades_total": len(results),
-            "resolved": n_resolved,
-            "wins": n_win,
-            "losses": n_loss,
-            "win_rate_resolved": (n_win / n_resolved * 100.0) if n_resolved else 0.0,
-            "total_R": float(sum_r),
-            "total_pnl_yen": float(sum_pnl),
-        },
-        "results": results,
+        "assumption_same_bar": "LOSS_first_if_SL_and_TP_touched_in_same_1h_bar",
+        "market_info": signals.get("market_info"),
+        "market_filter": signals.get("market_filter"),
+        "session": signals.get("session"),
     }
 
-    _write_json(out_path, payload)
-    _write_json(latest_path, payload)
+    summary = {
+        "trades_total": len(results),
+        "resolved": n_resolved,
+        "wins": n_win,
+        "losses": n_loss,
+        "win_rate_resolved": (float(n_win) / float(n_resolved)) if n_resolved > 0 else 0.0,
+        "total_R": float(sum_r),
+        "total_pnl_yen": float(sum_pnl),
+    }
 
-    print("Saved:", out_path)
-    print("Saved:", latest_path)
+    payload = {"meta": meta, "summary": summary, "results": results}
+    _write_json(out_path, payload)
+    print("[WRITE]", out_path)
 
 
 if __name__ == "__main__":
