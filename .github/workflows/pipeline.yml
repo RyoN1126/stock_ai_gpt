@@ -78,6 +78,12 @@ jobs:
             python main.py --session $SESSION
           fi
 
+      - name: List signals/outputs
+        run: |
+          ls -la
+          ls -la signals || true
+          ls -la outputs || true
+
       # =========================
       # Evaluate latest signals
       # =========================

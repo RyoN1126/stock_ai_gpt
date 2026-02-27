@@ -79,58 +79,67 @@ def _resolve_signal_path_from_latest_meta(latest_meta_path: str, signals_dir: st
     if not latest_file:
         raise FileNotFoundError(f"latest_file not found in {latest_meta_path}")
 
-    # Case A: already correct relative path e.g. "signals/signals_YYYY-MM-DD_close.json"
+    # Build candidate paths from meta
     candidates = []
+
+    base = os.path.basename(latest_file)
 
     # 1) as-is
     candidates.append(latest_file)
 
-    # 2) prepend signals_dir if it looks like only a filename
-    if os.path.basename(latest_file) == latest_file:
-        candidates.append(os.path.join(signals_dir, latest_file))
+    # 2) base only (repo root)
+    candidates.append(base)
 
-    # 3) if it is like "2026-02-27_close.json" (missing prefix "signals_")
-    base = os.path.basename(latest_file)
-    if base and not base.startswith("signals_") and ("_" in base):
-        # try to build correct name
-        # expected: signals_YYYY-MM-DD_session.json
+    # 3) under signals_dir
+    candidates.append(os.path.join(signals_dir, base))
+
+    # 4) if base is like "YYYY-MM-DD_close.json", add "signals_" prefix
+    if base and not base.startswith("signals_") and "_" in base:
         candidates.append(os.path.join(signals_dir, f"signals_{base}"))
+        candidates.append(f"signals_{base}")  # repo root variant
 
-    # 4) also try forcing directory "signals/"
-    if not latest_file.startswith(signals_dir + os.sep) and not latest_file.startswith(signals_dir + "/"):
+    # 5) if meta had "signals/..." but file actually "signals/signals_..."
+    if base and base.startswith("signals_"):
         candidates.append(os.path.join(signals_dir, base))
 
-    # pick first existing
+    # 6) glob fallback using date/session parsed from meta
+    # Try to parse "...YYYY-MM-DD_session..."
+    stem = base.replace(".json", "")
+    parts = stem.split("_")
+    date_part = None
+    session_part = None
+
+    if len(parts) >= 3 and parts[0] == "signals":
+        # signals_YYYY-MM-DD_close
+        date_part, session_part = parts[1], parts[2]
+    elif len(parts) >= 2:
+        # YYYY-MM-DD_close
+        date_part, session_part = parts[0], parts[1]
+
+    if date_part and session_part:
+        patt1 = os.path.join(signals_dir, f"signals_{date_part}_{session_part}.json")
+        patt2 = os.path.join(signals_dir, f"*{date_part}*{session_part}*.json")
+        for patt in (patt1, patt2):
+            hits = glob.glob(patt)
+            if hits:
+                hits.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+                return hits[0]
+
+    # 7) try candidates directly
     for p in candidates:
         if p and os.path.exists(p):
             return p
 
-    # last resort: glob search by date/session if parseable
-    # try parse "...YYYY-MM-DD_session..."
-    stem = base.replace(".json", "")
-    parts = stem.split("_")
-    if len(parts) >= 2:
-        # if already "signals_YYYY-MM-DD_session" -> last two parts include date/session
-        date_part = None
-        session_part = None
-        if parts[0] == "signals" and len(parts) >= 3:
-            date_part = parts[1]
-            session_part = parts[2]
-        elif len(parts) >= 2:
-            # maybe "YYYY-MM-DD_close"
-            date_part = parts[0]
-            session_part = parts[1]
-
-        if date_part and session_part:
-            patt = os.path.join(signals_dir, f"signals_{date_part}_{session_part}.json")
-            hits = glob.glob(patt)
-            if hits:
-                return hits[0]
+    # 8) FINAL SAFETY NET: pick most recent signals file
+    all_signals = glob.glob(os.path.join(signals_dir, "*.json"))
+    if all_signals:
+        all_signals.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+        return all_signals[0]
 
     raise FileNotFoundError(
-        f"Could not resolve signal file from latest_meta. Tried: {candidates} (latest_meta={latest_meta_path})"
+        f"Could not resolve signal file from latest_meta. Tried: {candidates} "
+        f"(latest_meta={latest_meta_path}) and no signals found in {signals_dir}/"
     )
-
 
 def _resolve_signal_path_by_date(date_str: str, session: str, signals_dir: str) -> str:
     expected = os.path.join(signals_dir, f"signals_{date_str}_{session}.json")
