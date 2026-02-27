@@ -71,55 +71,6 @@ def _today_str_jst():
     return _now_jst().strftime("%Y-%m-%d")
 
 
-
-def _parse_date_jst(date_str: str | None):
-    """Parse YYYY-MM-DD as a JST date. If None, use today's JST date."""
-    if not date_str:
-        return _now_jst().date()
-    return datetime.strptime(date_str, "%Y-%m-%d").date()
-
-
-def _asof_jst_for_session(d, cutoff_jst: str) -> pd.Timestamp:
-    """Build a tz-aware JST timestamp for a given date and cutoff time (HH:MM)."""
-    h, m = map(int, cutoff_jst.split(":"))
-    return pd.Timestamp(datetime(d.year, d.month, d.day, h, m, 0, tzinfo=_tz()))
-
-
-def market_regime_ok(market_ticker: str, asof_date_jst) -> tuple[bool, dict]:
-    """Simple regime filter: close > SMA50 and SMA50 > SMA200 on or before asof_date_jst."""
-    try:
-        dfm = yf.download(market_ticker, period="3y", interval="1d", progress=False)
-    except Exception:
-        return True, {"market_error": "download_failed"}
-
-    if dfm is None or len(dfm) < 260:
-        return True, {"market_error": "insufficient_data"}
-
-    if isinstance(dfm.columns, pd.MultiIndex):
-        dfm.columns = dfm.columns.get_level_values(0)
-
-    dfm = dfm.dropna()
-    idx = pd.to_datetime(dfm.index, errors="coerce", utc=True)
-    dfm = dfm.loc[~idx.isna()].copy()
-    dfm.index = idx[~idx.isna()].tz_convert(TZ_NAME)
-
-    # keep rows up to end of asof_date_jst (JST)
-    end_jst = pd.Timestamp(datetime(asof_date_jst.year, asof_date_jst.month, asof_date_jst.day, 23, 59, 59, tzinfo=_tz()))
-    dfm = dfm.loc[dfm.index <= end_jst]
-    if len(dfm) < 260:
-        return True, {"market_error": "insufficient_data_asof"}
-
-    close = dfm["Close"]
-    sma50 = close.rolling(50).mean()
-    sma200 = close.rolling(200).mean()
-
-    c = float(close.iloc[-1])
-    s50 = float(sma50.iloc[-1])
-    s200 = float(sma200.iloc[-1])
-
-    ok = (c > s50) and (s50 > s200)
-    info = {"close": c, "sma50": s50, "sma200": s200, "ok": ok, "ticker": market_ticker}
-    return ok, info
 def load_prime_universe_from_jpx_xlsx(path: str) -> list[str]:
     uni = pd.read_excel(path)
     seg = uni["Section/Products"].astype(str)
@@ -174,12 +125,11 @@ def resample_4h(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def pick_confirm_1h_bar(df1h: pd.DataFrame, asof_jst: pd.Timestamp):
+def pick_confirm_1h_bar(df1h: pd.DataFrame, confirm_bar_mode: str, cutoff_jst: str):
     """
-    Pick the last 1H bar at/before a given JST datetime (asof_jst).
-
-    - df1h index may be tz-naive or tz-aware; we normalize to UTC then convert to JST.
-    - Returns: (original_ts, row, vol_ma20_at_bar)
+    confirm_bar_mode:
+      - "latest": df1h last row
+      - "morning_session": pick last row whose JST timestamp <= cutoff_jst
     """
     if df1h is None or len(df1h) == 0:
         raise ValueError("empty df1h")
@@ -192,26 +142,23 @@ def pick_confirm_1h_bar(df1h: pd.DataFrame, asof_jst: pd.Timestamp):
     if "Volume" not in df1h.columns:
         raise ValueError("Volume column missing")
 
-    # Normalize index to UTC then to JST for comparison
-    idx_utc = pd.to_datetime(df1h.index, errors="coerce", utc=True)
-    ok = ~idx_utc.isna()
-    df1h = df1h.loc[ok].copy()
-    idx_utc = idx_utc[ok]
-    jst_index = idx_utc.tz_convert(TZ_NAME)
-
     vol_ma20 = df1h["Volume"].rolling(20).mean()
 
-    # last bar at/before asof_jst
-    if asof_jst.tzinfo is None:
-        asof_jst = asof_jst.tz_localize(TZ_NAME)
+    if confirm_bar_mode == "latest":
+        return df1h.index[-1], df1h.iloc[-1], float(vol_ma20.iloc[-1])
 
-    mask = jst_index <= asof_jst
-    if mask.any():
-        pos = int(mask.to_numpy().nonzero()[0][-1])
+    # cutoff mode
+    cutoff_h, cutoff_m = map(int, cutoff_jst.split(":"))
+    jst_index = pd.Index([_to_jst(pd.Timestamp(t)) for t in df1h.index])
+
+    mask = [(t.hour < cutoff_h) or (t.hour == cutoff_h and t.minute <= cutoff_m) for t in jst_index]
+
+    if any(mask):
+        pos = max(i for i, ok in enumerate(mask) if ok)
         return df1h.index[pos], df1h.iloc[pos], float(vol_ma20.iloc[pos])
 
-    # fallback: nothing before asof → use earliest bar (safer than latest)
-    return df1h.index[0], df1h.iloc[0], float(vol_ma20.iloc[0])
+    # fallback
+    return df1h.index[-1], df1h.iloc[-1], float(vol_ma20.iloc[-1])
 
 
 drop_stats_template = {
@@ -227,33 +174,9 @@ drop_stats_template = {
 
 def parse_args():
     p = argparse.ArgumentParser(description="4H pullback scanner (session=morning/close)")
-    p.add_argument(
-        "--session",
-        type=str,
-        required=True,
-        choices=["morning", "close"],
-        help="Session label: morning (uses last 1H bar up to 11:30 JST) or close (up to 15:30 JST)",
-    )
-    p.add_argument(
-        "--date",
-        type=str,
-        default=None,
-        help="Target date in JST (YYYY-MM-DD). Default: today (JST).",
-    )
+    p.add_argument("--session", type=str, required=True, choices=["morning", "close"],
+                   help="Session label: morning (after 11:30) or close (after 15:30)")
     p.add_argument("--max_positions", type=int, default=None, help="Override MAX_POSITIONS")
-    p.add_argument(
-        "--market_filter",
-        type=str,
-        default="on",
-        choices=["on", "off"],
-        help="Enable/disable market regime filter (default: on).",
-    )
-    p.add_argument(
-        "--market_ticker",
-        type=str,
-        default="^N225",
-        help='Market ticker for regime filter (default: "^N225").',
-    )
     return p.parse_args()
 
 
@@ -262,20 +185,17 @@ def main():
     session = args.session
 
     preset = SESSION_PRESETS[session]
+    confirm_bar_mode = preset["confirm_bar_mode"]
     cutoff = preset["cutoff"]
     label = preset["label"]
     max_positions = args.max_positions if args.max_positions is not None else MAX_POSITIONS
-
-    # Target "as-of" date/time (JST)
-    target_date = _parse_date_jst(args.date)
-    date_str = target_date.strftime("%Y-%m-%d")
-    asof_jst = _asof_jst_for_session(target_date, cutoff)
 
     # Ensure output dirs
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     os.makedirs(SIGNALS_DIR, exist_ok=True)
 
     # signal filename (no overwrite)
+    date_str = _today_str_jst()
     signal_filename = f"{date_str}_{label}.json"
     signal_path = os.path.join(SIGNALS_DIR, signal_filename)
 
@@ -285,42 +205,6 @@ def main():
         signal_filename = f"{date_str}_{label}_{suffix}.json"
         signal_path = os.path.join(SIGNALS_DIR, signal_filename)
 
-    # Optional market regime filter
-    market_info = None
-    if args.market_filter == "on":
-        ok, market_info = market_regime_ok(args.market_ticker, target_date)
-        print(f"[MARKET] {market_info}", flush=True)
-        if not ok:
-            print("Market regime filter: OFFENSE DISABLED (no new entries).", flush=True)
-            # still write outputs for traceability
-            payload = {
-                "asof": str(asof_jst),
-                "session": session,
-                "session_note": preset.get("note"),
-                "target_date_jst": date_str,
-                "cutoff": cutoff,
-                "market_filter": "on",
-                "market_info": market_info,
-                "max_positions": max_positions,
-                "count": 0,
-                "sig_hits_total": 0,
-                "drop_stats": dict(drop_stats_template),
-                "candidates": [],
-            }
-            with open(signal_path, "w", encoding="utf-8") as f:
-                json.dump(payload, f, ensure_ascii=False, indent=2)
-
-            # Update latest files
-            latest_path = os.path.join(OUTPUT_DIR, "today_candidates_latest.json")
-            with open(latest_path, "w", encoding="utf-8") as f:
-                json.dump(payload, f, ensure_ascii=False, indent=2)
-
-            meta_path = os.path.join(OUTPUT_DIR, "today_candidates_latest_meta.json")
-            with open(meta_path, "w", encoding="utf-8") as f:
-                json.dump({"asof": payload["asof"], "session": session, "target_date_jst": date_str, "latest_file": os.path.relpath(signal_path, start=OUTPUT_DIR).replace("\\", "/"), "market_filter": args.market_filter, "market_info": market_info, "cutoff": cutoff}, f, ensure_ascii=False, indent=2)
-            return
-    else:
-        print("[MARKET] filter=off", flush=True)
     print("=== LOAD UNIVERSE ===", flush=True)
     tickers = load_prime_universe_from_jpx_xlsx(UNIVERSE_XLSX)
 
@@ -328,17 +212,13 @@ def main():
     sig_hits_total = 0
     drop_stats = dict(drop_stats_template)
 
-    # Download window (so --date can be in the past)
-    dl_start = (datetime(target_date.year, target_date.month, target_date.day) - pd.Timedelta(days=90)).date()
-    dl_end = (datetime(target_date.year, target_date.month, target_date.day) + pd.Timedelta(days=2)).date()
-
     for ticker in tickers:
-        df = yf.download(ticker, start=str(dl_start), end=str(dl_end), interval=INTERVAL_1H, progress=False)
+        df = yf.download(ticker, period=PERIOD_1H, interval=INTERVAL_1H, progress=False)
         if df is None or len(df) < 80:
             continue
 
         df = df.dropna()
-        df.index = pd.to_datetime(df.index, utc=True)
+        df.index = pd.to_datetime(df.index)
 
         df4 = resample_4h(df)
         if len(df4) < 40:
@@ -362,7 +242,7 @@ def main():
             continue
 
         try:
-            sel_ts, sel_row, vol1h_ma20 = pick_confirm_1h_bar(df, asof_jst)
+            sel_ts, sel_row, vol1h_ma20 = pick_confirm_1h_bar(df, confirm_bar_mode, cutoff)
         except Exception:
             continue
 
@@ -370,11 +250,10 @@ def main():
 
         # Use EMA20 from the 4H bar at/before confirm bar time (avoids future-bar leak)
         sel_ts_jst = _to_jst(pd.Timestamp(sel_ts))
-        idxs = [i for i, t in enumerate(df4.index) if t <= sel_ts_jst]
-        if not idxs:
-            # no 4H bar at/before confirm timestamp → skip to avoid future-bar leak
-            continue
-        ema_ref_idx = idxs[-1]
+        ema_ref_idx = max(
+            (i for i, t in enumerate(df4.index) if t <= sel_ts_jst),
+            default=len(df4) - 1,
+        )
         ema_now = float(df4.iloc[ema_ref_idx]["EMA20"])
         dist_now = (entry / ema_now) - 1.0
 
@@ -466,15 +345,13 @@ def main():
     candidates.sort(key=lambda x: x["score"], reverse=True)
 
     payload = {
-        "asof": str(asof_jst),
+        "asof": _now_jst().isoformat(),
         "session": session,
-        "session_note": preset.get("note"),
-        "target_date_jst": date_str,
+        "session_note": preset["note"],
+        "confirm_bar_mode": confirm_bar_mode,
         "cutoff": cutoff,
-        "market_filter": args.market_filter,
-        "market_info": market_info,
         "max_positions": int(max_positions),
-        "count": min(len(candidates), int(max_positions)),
+        "count": len(candidates),
         "sig_hits_total": sig_hits_total,
         "drop_stats": drop_stats,
         "candidates": candidates[:max_positions],
@@ -494,7 +371,8 @@ def main():
         "asof": payload["asof"],
         "session": session,
         "latest_file": os.path.relpath(signal_path, start=OUTPUT_DIR).replace("\\", "/"),
-                "cutoff": cutoff,
+        "confirm_bar_mode": confirm_bar_mode,
+        "cutoff": cutoff,
         "max_positions": int(max_positions),
     }
     latest_meta_path = os.path.join(OUTPUT_DIR, "today_candidates_latest_meta.json")
