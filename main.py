@@ -59,6 +59,44 @@ SESSION_PRESETS = {
 }
 
 
+def normalize_ohlcv(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize yfinance output to single-ticker OHLCV columns.
+
+    yfinance sometimes returns MultiIndex columns like (Field, Ticker) even for a single ticker.
+    Naively dropping one level can create duplicated column names, which then turns df["Volume"]
+    into a DataFrame (not Series) and breaks downstream float()/rolling() calls.
+
+    This function:
+      - Collapses MultiIndex to one set of OHLCV columns by taking the first column per field.
+      - If columns are duplicated, keeps the first occurrence per name.
+    """
+    if df is None or len(df) == 0:
+        return df
+
+    df = df.copy()
+
+    # MultiIndex: (Field, Ticker) or similar
+    if isinstance(df.columns, pd.MultiIndex):
+        lvl0 = df.columns.get_level_values(0)
+        fields = ["Open", "High", "Low", "Close", "Adj Close", "Volume"]
+        new = {}
+        for f in fields:
+            if f in set(lvl0):
+                cols = [c for c in df.columns if c[0] == f]
+                if cols:
+                    new[f] = df[cols[0]]
+        if new:
+            df = pd.DataFrame(new, index=df.index)
+        else:
+            # Fallback: just take the last level
+            df.columns = df.columns.get_level_values(-1)
+
+    # Drop duplicated column names safely (keep first)
+    if df.columns.duplicated().any():
+        df = df.loc[:, ~df.columns.duplicated()].copy()
+
+    return df
+
 def _tz():
     return pytz.timezone(TZ_NAME)
 
@@ -89,6 +127,7 @@ def market_regime_ok(market_ticker: str, asof_date_jst) -> tuple[bool, dict]:
     """Simple regime filter: close > SMA50 and SMA50 > SMA200 on or before asof_date_jst."""
     try:
         dfm = yf.download(market_ticker, period="3y", interval="1d", progress=False)
+        dfm = normalize_ohlcv(dfm)
     except Exception:
         return True, {"market_error": "download_failed"}
 
@@ -149,9 +188,7 @@ def resample_4h(df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame()
 
     df = df.copy()
-
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = df.columns.get_level_values(0)
+    df = normalize_ohlcv(df)
 
     need = ["Open", "High", "Low", "Close", "Volume"]
     if not set(need).issubset(df.columns):
@@ -185,9 +222,7 @@ def pick_confirm_1h_bar(df1h: pd.DataFrame, asof_jst: pd.Timestamp):
         raise ValueError("empty df1h")
 
     df1h = df1h.copy()
-
-    if isinstance(df1h.columns, pd.MultiIndex):
-        df1h.columns = df1h.columns.get_level_values(0)
+    df1h = normalize_ohlcv(df1h)
 
     if "Volume" not in df1h.columns:
         raise ValueError("Volume column missing")
@@ -334,6 +369,8 @@ def main():
 
     for ticker in tickers:
         df = yf.download(ticker, start=str(dl_start), end=str(dl_end), interval=INTERVAL_1H, progress=False)
+
+        df = normalize_ohlcv(df)
         if df is None or len(df) < 80:
             continue
 
