@@ -199,43 +199,48 @@ def pick_universe_file() -> str:
 def load_universe_from_excel(path: str) -> list[str]:
     """
     Read an Excel universe and return tickers like '5406.T'.
-    Robustly detects the code column (日本語/英語の揺れ + 4桁推定).
+    Prefer 'Local Code' column (JPX/TSE listed issues file).
     """
     if not os.path.exists(path):
         raise FileNotFoundError(f"Universe file not found: {path}")
 
     df = pd.read_excel(path)
 
-    # 1) try name-based candidates
-    candidate_cols = []
-    for c in df.columns:
-        s = str(c)
-        if any(k in s for k in ["コード", "銘柄コード", "証券コード", "Code", "code", "Security Code"]):
-            candidate_cols.append(c)
-
-    def score_code_col(series: pd.Series) -> int:
-        x = series.astype(str).str.replace(r"\D", "", regex=True)
-        return int((x.str.len() == 4).sum())
-
-    code_col = None
-    if candidate_cols:
-        code_col = max(candidate_cols, key=lambda c: score_code_col(df[c]))
+    # 1) Prefer exact column
+    if "Local Code" in df.columns:
+        code_col = "Local Code"
     else:
-        # 2) guess by 4-digit density
-        best = None
-        best_score = 0
+        # fallback: old heuristic
+        candidate_cols = []
         for c in df.columns:
-            try:
-                sc = score_code_col(df[c])
-                if sc > best_score:
-                    best_score = sc
-                    best = c
-            except Exception:
-                continue
-        code_col = best
+            s = str(c)
+            if any(k in s for k in ["コード", "銘柄コード", "証券コード", "Code", "code", "Security Code"]):
+                candidate_cols.append(c)
 
-    if code_col is None:
-        raise RuntimeError("Could not detect code column in universe excel")
+        def score_code_col(series: pd.Series) -> int:
+            x = series.astype(str).str.replace(r"\D", "", regex=True)
+            # exclude leading-zero 4-digits to avoid picking index-like columns
+            ok = (x.str.len() == 4) & (~x.str.startswith("0"))
+            return int(ok.sum())
+
+        code_col = None
+        if candidate_cols:
+            code_col = max(candidate_cols, key=lambda c: score_code_col(df[c]))
+        else:
+            best = None
+            best_score = 0
+            for c in df.columns:
+                try:
+                    sc = score_code_col(df[c])
+                    if sc > best_score:
+                        best_score = sc
+                        best = c
+                except Exception:
+                    continue
+            code_col = best
+
+        if code_col is None:
+            raise RuntimeError("Could not detect code column in universe excel")
 
     codes = (
         df[code_col]
@@ -243,9 +248,13 @@ def load_universe_from_excel(path: str) -> list[str]:
         .str.replace(r"\D", "", regex=True)
         .str.zfill(4)
     )
-    codes = codes[codes.str.len() == 4].dropna().unique().tolist()
+    codes = codes[codes.str.len() == 4]
 
-    return [f"{c}.T" for c in codes]
+    # IMPORTANT: drop leading-zero codes (0130 etc.)
+    codes = codes[~codes.str.startswith("0")]
+
+    tickers = [f"{c}.T" for c in codes.dropna().unique().tolist()]
+    return tickers
 
 
 # =========================
