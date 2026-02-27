@@ -82,10 +82,14 @@ def list_result_files(results_dir: str) -> List[ResultFile]:
         try:
             data = load_json(path)
             if isinstance(data, dict):
-                if data.get("evaluated_at"):
-                    evaluated = parse_iso_dt(data["evaluated_at"]).astimezone(tz())
-                if data.get("signal_asof"):
-                    signal_asof = parse_iso_dt(data["signal_asof"]).astimezone(tz())
+                # result JSON stores these under "meta" key
+                meta = data.get("meta") or {}
+                ev_str = meta.get("evaluated_at") or data.get("evaluated_at")
+                sa_str = meta.get("signal_asof") or data.get("signal_asof")
+                if ev_str:
+                    evaluated = parse_iso_dt(ev_str).astimezone(tz())
+                if sa_str:
+                    signal_asof = parse_iso_dt(sa_str).astimezone(tz())
         except Exception:
             evaluated = None
             signal_asof = None
@@ -199,14 +203,14 @@ def pick_latest_per_session(files: List[ResultFile], strict: bool) -> List[Resul
 
 
 def filter_by_range(files: List[ResultFile], d_from: Optional[str], d_to: Optional[str]) -> List[ResultFile]:
-    df = datetime.strptime(d_from, "%Y-%m-%d").date() if d_from else None
-    dt_ = datetime.strptime(d_to, "%Y-%m-%d").date() if d_to else None
+    from_date = datetime.strptime(d_from, "%Y-%m-%d").date() if d_from else None
+    to_date = datetime.strptime(d_to, "%Y-%m-%d").date() if d_to else None
 
     out = []
     for f in files:
-        if df and f.day < df:
+        if from_date and f.day < from_date:
             continue
-        if dt_ and f.day > dt_:
+        if to_date and f.day > to_date:
             continue
         out.append(f)
     return out

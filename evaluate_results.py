@@ -93,6 +93,13 @@ def parse_signal_meta(signal_path: str, data: Dict[str, Any]) -> SignalMeta:
         asof_str = meta.get("asof") or meta.get("asof_jst") or meta.get("generated_at") or meta.get("timestamp")
         session = meta.get("session")
 
+    # main.py outputs asof/session at top level (not nested under "meta")
+    if isinstance(data, dict):
+        if not asof_str:
+            asof_str = data.get("asof") or data.get("asof_jst")
+        if not session:
+            session = data.get("session")
+
     if not session:
         session = detect_session_from_filename(signal_path) or "close"
 

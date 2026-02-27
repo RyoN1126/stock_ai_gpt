@@ -1,4 +1,5 @@
 # SCAN v3.0 (session=morning/close, signals timestamped + keep latest + meta)
+import math
 import yfinance as yf
 import pandas as pd
 import ta
@@ -31,6 +32,11 @@ NOW_MAX_DIST = 0.01
 USE_1H_CONFIRM = True
 VOL_MULT_1H = 1.2
 MIN_1H_CANDLE_PCT = 0
+
+# Liquidity / price filters
+MIN_PRICE = 300
+MAX_PRICE = 50_000
+MIN_AVG_VOL_1H = 10_000  # minimum average hourly volume (shares)
 
 OUTPUT_DIR = "outputs"
 SIGNALS_DIR = os.path.join(OUTPUT_DIR, "signals")
@@ -161,6 +167,8 @@ drop_stats_template = {
     "confirm_1h": 0,
     "extend_filter": 0,
     "risk_zero": 0,
+    "price_filter": 0,
+    "liquidity_filter": 0,
 }
 
 
@@ -221,10 +229,32 @@ def main():
             high=df4["High"], low=df4["Low"], close=df4["Close"], window=14
         ).average_true_range()
 
-        sel_ts, sel_row, vol1h_ma20 = pick_confirm_1h_bar(df, confirm_bar_mode, cutoff)
+        # --- Price filter ---
+        current_close = float(df4.iloc[-1]["Close"])
+        if not (MIN_PRICE <= current_close <= MAX_PRICE):
+            drop_stats["price_filter"] += 1
+            continue
+
+        # --- Liquidity filter: minimum average hourly volume ---
+        avg_vol_1h = float(df["Volume"].mean()) if "Volume" in df.columns else 0.0
+        if avg_vol_1h < MIN_AVG_VOL_1H:
+            drop_stats["liquidity_filter"] += 1
+            continue
+
+        try:
+            sel_ts, sel_row, vol1h_ma20 = pick_confirm_1h_bar(df, confirm_bar_mode, cutoff)
+        except Exception:
+            continue
 
         entry = float(sel_row["Close"])
-        ema_now = float(df4.iloc[-1]["EMA20"])
+
+        # Use EMA20 from the 4H bar at/before confirm bar time (avoids future-bar leak)
+        sel_ts_jst = _to_jst(pd.Timestamp(sel_ts))
+        ema_ref_idx = max(
+            (i for i, t in enumerate(df4.index) if t <= sel_ts_jst),
+            default=len(df4) - 1,
+        )
+        ema_now = float(df4.iloc[ema_ref_idx]["EMA20"])
         dist_now = (entry / ema_now) - 1.0
 
         if not (NOW_MIN_DIST <= dist_now <= NOW_MAX_DIST):
@@ -237,6 +267,9 @@ def main():
         vol1h = float(sel_row["Volume"])
 
         if USE_1H_CONFIRM:
+            if math.isnan(vol1h_ma20) or vol1h_ma20 <= 0:
+                drop_stats["confirm_1h"] += 1
+                continue
             if candle1h_pct <= MIN_1H_CANDLE_PCT or vol1h < vol1h_ma20 * VOL_MULT_1H:
                 drop_stats["confirm_1h"] += 1
                 continue
@@ -244,6 +277,9 @@ def main():
         best_i = None
         for i in range(len(df4) - 1, max(0, len(df4) - LOOKBACK_BARS) - 1, -1):
             sig = df4.iloc[i]
+            # NaN guard: skip bars where indicators are not yet computed
+            if math.isnan(sig["EMA20"]) or math.isnan(sig["ATR"]):
+                continue
             if (sig["Low"] <= sig["EMA20"]) and (sig["Close"] > sig["EMA20"]):
                 sig_hits_total += 1
                 if entry <= float(sig["EMA20"]) * (1.0 + MAX_EXTEND):
@@ -256,7 +292,8 @@ def main():
             drop_stats["no_signal_4h"] += 1
             continue
 
-        atr = float(df4.iloc[best_i]["ATR"])
+        sig_bar = df4.iloc[best_i]
+        atr = float(sig_bar["ATR"])
         sl = entry - ATR_MULT * atr
         risk_per_share = entry - sl
 
@@ -267,9 +304,45 @@ def main():
         tp = entry + RR * risk_per_share
         shares = int((START_EQUITY * RISK_PCT) / risk_per_share)
 
-        candidates.append(
-            {"ticker": ticker, "entry": round(entry, 2), "sl": round(sl, 2), "tp": round(tp, 2), "shares": shares}
+        if shares <= 0:
+            drop_stats["risk_zero"] += 1
+            continue
+
+        # --- Score (higher = better) ---
+        bars_ago = (len(df4) - 1) - best_i
+        atrp = (atr / entry) * 100.0
+        rebound_pct = (float(sig_bar["Close"]) / float(sig_bar["EMA20"]) - 1.0) * 100.0
+        touch_depth_pct = (float(sig_bar["EMA20"]) / float(sig_bar["Low"]) - 1.0) * 100.0
+        vol_boost = math.log1p(vol1h / vol1h_ma20)
+        score = (
+            (2.0 - abs(dist_now * 100.0))
+            + (candle1h_pct * 1.4)
+            + (vol_boost * 1.2)
+            + (max(0, 4 - bars_ago) * 0.25)
+            + (rebound_pct * 2.0)
+            - (abs(atrp - 2.5) * 0.2)
+            - (max(0, touch_depth_pct - 1.2) * 0.8)
         )
+
+        candidates.append(
+            {
+                "ticker": ticker,
+                "entry": round(entry, 2),
+                "sl": round(sl, 2),
+                "tp": round(tp, 2),
+                "shares": shares,
+                "score": round(score, 3),
+                "dist_to_ema20_pct": round(dist_now * 100, 2),
+                "candle1h_pct": round(candle1h_pct, 2),
+                "vol1h_vs_ma20": round(vol1h / vol1h_ma20, 2),
+                "bars_ago": int(bars_ago),
+                "rebound_pct": round(rebound_pct, 2),
+                "touch_depth_pct": round(touch_depth_pct, 2),
+            }
+        )
+
+    # Sort by score descending so candidates[:max_positions] picks the best
+    candidates.sort(key=lambda x: x["score"], reverse=True)
 
     payload = {
         "asof": _now_jst().isoformat(),

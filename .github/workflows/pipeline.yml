@@ -45,7 +45,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install yfinance pandas ta pytz openpyxl
+          pip install -r requirements.txt
 
       # ---- Decide TASK ----
       - name: Decide task (schedule vs manual)
@@ -96,7 +96,7 @@ jobs:
       - name: Run evaluate
         if: env.TASK == 'evaluate' || env.TASK == 'eval_and_aggregate'
         run: |
-          python evaluate_results.py --latest-meta || true
+          python evaluate_results.py --latest || true
 
       - name: Run aggregate
         if: env.TASK == 'aggregate' || env.TASK == 'eval_and_aggregate'
