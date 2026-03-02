@@ -10,19 +10,23 @@ on:
   workflow_dispatch:
     inputs:
       session:
-        description: "morning or close"
+        description: "morning or close (通常実行用)"
         required: true
         default: "close"
       date:
-        description: "YYYY-MM-DD (JST, optional)"
+        description: "YYYY-MM-DD (JST, optional) (通常実行用)"
         required: false
         default: ""
+      backfill_days:
+        description: "Backfill last N days (0 = disabled). Ex: 10"
+        required: false
+        default: "0"
 
 jobs:
   run:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # ← results-historyへpushするために必要
+      contents: write
 
     steps:
       # =========================
@@ -31,7 +35,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # ← ブランチ操作・push用
+          fetch-depth: 0
 
       # =========================
       # Setup Python
@@ -70,11 +74,34 @@ jobs:
         run: |
           echo "SESSION=${{ inputs.session }}" >> $GITHUB_ENV
           echo "INPUT_DATE=${{ inputs.date }}" >> $GITHUB_ENV
+          echo "BACKFILL_DAYS=${{ inputs.backfill_days }}" >> $GITHUB_ENV
 
       # =========================
-      # Run scanner
+      # (Backfill) Run main+evaluate for past N days (manual only)
+      # =========================
+      - name: Backfill (manual) - run main+evaluate for last N days
+        if: github.event_name == 'workflow_dispatch' && inputs.backfill_days != '0'
+        run: |
+          set -e
+          N=${{ inputs.backfill_days }}
+          echo "=== BACKFILL start: last ${N} days ==="
+
+          for i in $(seq 0 $N); do
+            D=$(date -u -d "$i days ago" +"%Y-%m-%d")
+            for S in morning close; do
+              echo "=== BACKFILL main: date=$D session=$S ==="
+              python main.py --date "$D" --session "$S" || true
+
+              echo "=== BACKFILL eval: date=$D session=$S ==="
+              python evaluate_results.py --date "$D" --session "$S" || true
+            done
+          done
+
+      # =========================
+      # (Normal) Run scanner (scheduled OR manual when backfill disabled)
       # =========================
       - name: Run scanner
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.backfill_days == '0')
         run: |
           if [ -n "$INPUT_DATE" ]; then
             python main.py --session $SESSION --date $INPUT_DATE
@@ -90,9 +117,10 @@ jobs:
           ls -la results || true
 
       # =========================
-      # Evaluate latest signals
+      # (Normal) Evaluate latest signals
       # =========================
       - name: Evaluate latest
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.backfill_days == '0')
         run: |
           python evaluate_results.py --latest
 
@@ -101,54 +129,61 @@ jobs:
       # =========================
       - name: Aggregate
         run: |
-          # 既存のaggregate.pyが --all を持ってる前提のまま
           python aggregate.py --all
 
       # =========================
-      # Read meta for artifact naming
+      # Read meta for artifact/history naming
       # =========================
       - name: Read run meta
         run: |
           python - << 'PY'
-          import json, os
+          import json, os, glob
           meta_path = "outputs/today_candidates_latest_meta.json"
-          if not os.path.exists(meta_path):
-              print("latest_meta not found:", meta_path)
-              raise SystemExit(1)
 
-          m = json.load(open(meta_path, "r", encoding="utf-8"))
-          latest = m.get("latest_file", "")
-          base = os.path.basename(latest)
-
-          # signals_YYYY-MM-DD_session.json
-          parts = base.replace(".json","").split("_")
-          date = parts[1] if len(parts) >= 3 else "unknown-date"
-          sess = parts[2] if len(parts) >= 3 else "unknown-session"
-
-          # run識別子（重複しにくい）
+          # backfill の場合、latest_meta が存在しない/最新が不明になるケースがあるので、
+          # signals配下から一番新しい signals_*.json を拾って RUN_DATE/RUN_SESSION を決めるフォールバックを用意
           run_id = os.environ.get("GITHUB_RUN_ID", "0")
           run_number = os.environ.get("GITHUB_RUN_NUMBER", "0")
+
+          date = "unknown-date"
+          sess = "unknown-session"
+
+          if os.path.exists(meta_path):
+              m = json.load(open(meta_path, "r", encoding="utf-8"))
+              latest = m.get("latest_file", "")
+              base = os.path.basename(latest)
+              parts = base.replace(".json","").split("_")
+              if len(parts) >= 3:
+                  date = parts[1]
+                  sess = parts[2]
+          else:
+              sigs = sorted(glob.glob("signals/signals_*.json"), key=lambda p: os.path.getmtime(p))
+              if sigs:
+                  base = os.path.basename(sigs[-1]).replace(".json","")
+                  parts = base.split("_")
+                  if len(parts) >= 3:
+                      date = parts[1]
+                      sess = parts[2]
 
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
               f.write(f"RUN_DATE={date}\n")
               f.write(f"RUN_SESSION={sess}\n")
               f.write(f"RUN_ID={run_id}\n")
               f.write(f"RUN_NUMBER={run_number}\n")
+          print("RUN_DATE", date, "RUN_SESSION", sess, "RUN_ID", run_id, "RUN_NUMBER", run_number)
           PY
 
       # =========================
-      # (②) Copy outputs into history folder (accumulate)
+      # (②) Stage history snapshot (accumulate)
       # =========================
       - name: Stage history snapshot
         run: |
           mkdir -p "history/${RUN_DATE}/${RUN_SESSION}/run-${RUN_NUMBER}-${RUN_ID}"
 
-          # run単位で固めて保存（再実行しても衝突しにくい）
           cp -r signals  "history/${RUN_DATE}/${RUN_SESSION}/run-${RUN_NUMBER}-${RUN_ID}/" || true
           cp -r outputs  "history/${RUN_DATE}/${RUN_SESSION}/run-${RUN_NUMBER}-${RUN_ID}/" || true
           cp -r results  "history/${RUN_DATE}/${RUN_SESSION}/run-${RUN_NUMBER}-${RUN_ID}/" || true
 
-          # ついでにトップにも “最新” を置く（見やすさ用）
           mkdir -p "history/${RUN_DATE}/${RUN_SESSION}/latest"
           rm -rf "history/${RUN_DATE}/${RUN_SESSION}/latest/signals" \
                  "history/${RUN_DATE}/${RUN_SESSION}/latest/outputs" \
@@ -167,7 +202,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # results-history が無ければ作る（初回）
           if git show-ref --verify --quiet refs/remotes/origin/results-history; then
             git checkout -B results-history origin/results-history
           else
@@ -175,16 +209,13 @@ jobs:
             git rm -rf . >/dev/null 2>&1 || true
           fi
 
-          # main(実行元)ブランチで作った history を取り込む
-          # （checkout先がresults-historyに切り替わっているので、ワークツリーにhistoryは残っている想定）
-          # 念のため、history以外はコミットしない
+          # history だけコミット
           git add history
-
           git commit -m "Add history ${RUN_DATE} ${RUN_SESSION} run-${RUN_NUMBER}-${RUN_ID}" || echo "No changes to commit"
           git push origin results-history
 
       # =========================
-      # (①) Upload artifacts (session+date)
+      # (①) Upload artifacts
       # =========================
       - name: Upload outputs
         uses: actions/upload-artifact@v4
