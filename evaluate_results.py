@@ -150,16 +150,69 @@ def _resolve_signal_path_from_date_session(signals_dir: str, date_str: str, sess
     raise FileNotFoundError(f"No signals file found for {date_str} {session} in {signals_dir}")
 
 
-def _evaluate_long_trade_1h(df: pd.DataFrame, entry: float, sl: float, tp: float) -> str:
+def _evaluate_long_trade_1h(
+    df: pd.DataFrame,
+    entry: float,
+    sl: float,
+    tp: float,
+    require_entry_fill: bool = True,
+) -> tuple[str, str | None]:
     """
-    Minimal evaluation:
-    - If within a 1H bar, both SL and TP are touched, assume LOSS first (conservative).
-    - Otherwise, first touch decides outcome.
-    - If neither touched, return OPEN.
-    Note: this does NOT check whether entry was hit (future improvement: NOT_FILLED).
+    1H-bar evaluation (long only).
+
+    Rules:
+    - Optionally require that price "fills" the entry (otherwise NOT_FILLED).
+      * With High/Low data: fill if Low <= entry <= High.
+      * Close-only fallback: fill if Close >= entry.
+    - After filled:
+      * If within a single bar both SL and TP are touched, assume LOSS first (conservative).
+      * Otherwise, first touch decides outcome.
+    - If neither SL nor TP is touched within the window, return OPEN.
+
+    Returns: (outcome, detail_reason)
+      outcome in {"WIN","LOSS","OPEN","NOT_FILLED"}
     """
     if df is None or df.empty:
-        return "OPEN"
+        return ("OPEN", "no_price_data")
+
+    has_hl = ("High" in df.columns) and ("Low" in df.columns)
+
+    filled = not require_entry_fill
+    fill_ts = None
+
+    for ts, row in df.iterrows():
+        if has_hl:
+            hi = float(row["High"])
+            lo = float(row["Low"])
+        else:
+            close = float(row["Close"])
+            hi = close
+            lo = close
+
+        if not filled:
+            if lo <= entry <= hi:
+                filled = True
+                fill_ts = ts
+            else:
+                continue
+
+        touched_sl = lo <= sl
+        touched_tp = hi >= tp
+
+        # If the same bar can contain both touches, be conservative.
+        if touched_sl and touched_tp:
+            return ("LOSS", "same_bar_sl_tp_conservative")
+
+        if touched_sl:
+            return ("LOSS", "sl_touched")
+
+        if touched_tp:
+            return ("WIN", "tp_touched")
+
+    if not filled:
+        return ("NOT_FILLED", "entry_not_reached")
+
+    return ("OPEN", "no_exit_within_window")
 
     # Use High/Low if present, otherwise Close-only fallback
     has_hl = ("High" in df.columns) and ("Low" in df.columns)
@@ -204,6 +257,11 @@ def main():
         default=5,
         help="Max holding window in days for evaluation (prevents future-leak when backfilling).",
     )
+
+
+    parser.add_argument("--account_size", type=float, default=200000.0, help="Account cash size (JPY) used for feasibility checks.")
+    parser.add_argument("--lot_size", type=int, default=100, help="Lot size (e.g., 100 for JP stocks). Shares will be floored to a multiple of this.")
+    parser.add_argument("--allow_unfilled_entry", action="store_true", help="Legacy mode: do NOT require entry to be reached before evaluating SL/TP.")
 
     args = parser.parse_args()
 
@@ -250,13 +308,49 @@ def main():
     n_resolved = 0
     n_win = 0
     n_loss = 0
+    n_not_filled = 0
 
     for c in signals.get("candidates", []):
         ticker = c["ticker"]
         entry = float(c["entry"])
         sl = float(c["sl"])
         tp = float(c["tp"])
-        shares = int(c.get("shares", 0))
+        shares_requested = int(c.get("shares", 0))
+        # Enforce lot sizing + cash feasibility (single-trade check)
+        lot = max(1, int(args.lot_size))
+        max_cash_shares = int(args.account_size // entry) if entry > 0 else 0
+        # floor both requested and cash shares to lot multiple
+        shares_req_lotted = (shares_requested // lot) * lot
+        shares_cash_lotted = (max_cash_shares // lot) * lot
+        shares = min(shares_req_lotted, shares_cash_lotted)
+
+        if shares < lot:
+            # Cannot place an order under these constraints
+            outcome = "NOT_FILLED"
+            outcome_reason = "insufficient_cash_or_lot"
+            r = 0.0
+            pnl = 0.0
+            n_not_filled += 1
+
+            sum_r += r
+            sum_pnl += pnl
+
+            results.append(
+                {
+                    "ticker": ticker,
+                    "result": outcome,
+                    "result_reason": outcome_reason,
+                    "R": float(r),
+                    "pnl_yen": float(pnl),
+                    "entry": entry,
+                    "sl": sl,
+                    "tp": tp,
+                    "shares_requested": shares_requested,
+                    "shares_used": shares,
+                    "notional_yen": float(entry * shares),
+                }
+            )
+            continue
 
         # Pull 1H data
         df = yf.download(
@@ -275,7 +369,7 @@ def main():
             if eval_end_utc is not None:
                 df = df[df.index <= eval_end_utc]
 
-        outcome = _evaluate_long_trade_1h(df, entry, sl, tp)
+        outcome, outcome_reason = _evaluate_long_trade_1h(df, entry, sl, tp, require_entry_fill=not args.allow_unfilled_entry)
 
         if outcome == "WIN":
             r = (tp - entry) / (entry - sl) if (entry - sl) != 0 else 0.0
@@ -287,6 +381,10 @@ def main():
             pnl = (sl - entry) * shares
             n_loss += 1
             n_resolved += 1
+        elif outcome == "NOT_FILLED":
+            r = 0.0
+            pnl = 0.0
+            n_not_filled += 1
         else:
             r = 0.0
             pnl = 0.0
@@ -303,7 +401,10 @@ def main():
                 "entry": entry,
                 "sl": sl,
                 "tp": tp,
-                "shares": shares,
+                "shares_requested": shares_requested,
+                "shares_used": shares,
+                "notional_yen": float(entry * shares),
+                "result_reason": outcome_reason,
             }
         )
 
@@ -328,6 +429,9 @@ def main():
         "start": start,
         "end": end_date,
         "hold_days": int(args.hold_days),
+        "account_size": float(args.account_size),
+        "lot_size": int(args.lot_size),
+        "allow_unfilled_entry": bool(args.allow_unfilled_entry),
         "eval_window_utc": {
             "asof_utc": (asof_ts_utc.isoformat() if asof_ts_utc is not None else None),
             "end_utc": (eval_end_utc.isoformat() if eval_end_utc is not None else None),
@@ -343,6 +447,7 @@ def main():
         "resolved": n_resolved,
         "wins": n_win,
         "losses": n_loss,
+        "not_filled": n_not_filled,
         "win_rate_resolved": (float(n_win) / float(n_resolved)) if n_resolved > 0 else 0.0,
         "total_R": float(sum_r),
         "total_pnl_yen": float(sum_pnl),

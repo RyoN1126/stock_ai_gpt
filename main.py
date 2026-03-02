@@ -34,8 +34,10 @@ SIGNALS_DIR = "signals"
 INTERVAL_1H = "1h"
 
 # Risk / sizing (placeholder; adjust as needed)
-ACCOUNT_SIZE = 100_000
-RISK_PER_TRADE = 0.01
+DEFAULT_ACCOUNT_SIZE = 200_000
+DEFAULT_RISK_PER_TRADE = 0.01
+DEFAULT_LOT_SIZE = 100  # Japanese stock lot size (100 shares)
+
 RR_DEFAULT = 1.8
 ATR_MULT_DEFAULT = 1.0
 MAX_POSITIONS_DEFAULT = 2
@@ -410,6 +412,10 @@ def parse_args():
     p.add_argument("--rr", type=float, default=RR_DEFAULT)
     p.add_argument("--atr_mult", type=float, default=ATR_MULT_DEFAULT)
 
+    p.add_argument("--account_size", type=int, default=DEFAULT_ACCOUNT_SIZE, help="Total cash (JPY) used for sizing")
+    p.add_argument("--risk_per_trade", type=float, default=DEFAULT_RISK_PER_TRADE, help="Risk budget per trade as fraction of account_size")
+    p.add_argument("--lot_size", type=int, default=DEFAULT_LOT_SIZE, help="Share lot size (e.g., 100 for Japan stocks)")
+
     p.add_argument("--market_filter", choices=["on", "off"], default="on")
     p.add_argument("--market_ticker", default="^N225")
 
@@ -594,8 +600,9 @@ def main():
 
             tp = entry + (risk_per_share * float(args.rr))
 
-            risk_yen = ACCOUNT_SIZE * RISK_PER_TRADE
-            shares = int(max(1, risk_yen / risk_per_share))
+            # NOTE: sizing is finalized AFTER ranking, with cash/lot constraints.
+            # keep per-share risk here for later sizing.
+            shares = 0
 
             # score (simple)
             candle_pct = (float(sel_row["Close"]) / float(sel_row["Open"]) - 1.0) * 100.0 if float(sel_row["Open"]) != 0 else 0.0
@@ -613,6 +620,7 @@ def main():
                 "sl": round(sl, 2),
                 "tp": round(tp, 2),
                 "shares": int(shares),
+                "risk_per_share": round(float(risk_per_share), 6),
                 "rr": float(args.rr),
                 "atr_mult": float(args.atr_mult),
                 "dist_to_ema20_pct": round(dist_now * 100, 2),
@@ -626,11 +634,58 @@ def main():
             payload["errors"].append(f"{ticker}: {repr(e)}")
             continue
 
-    # finalize
-    candidates = sorted(candidates, key=lambda x: x.get("score", 0.0), reverse=True)[: int(args.max_positions)]
-    payload["candidates"] = candidates
-    payload["count"] = len(candidates)
+    # finalize (rank -> allocate)
+    ranked = sorted(candidates, key=lambda x: x.get("score", 0.0), reverse=True)[: int(args.max_positions)]
+
+    account_size = int(args.account_size)
+    risk_per_trade = float(args.risk_per_trade)
+    lot_size = int(args.lot_size)
+
+    remaining_cash = account_size
+    allocated = []
+    dropped_cash = 0
+
+    risk_yen = account_size * risk_per_trade
+
+    for c in ranked:
+        entry = float(c["entry"])
+        rps = float(c.get("risk_per_share") or 0.0)
+
+        if rps <= 0 or entry <= 0:
+            continue
+
+        # risk-based shares (rounded down to lot)
+        risk_based = int(risk_yen / rps)
+        risk_based = (risk_based // lot_size) * lot_size
+
+        # cash-based shares using remaining cash (rounded down to lot)
+        cash_based = int(remaining_cash / entry)
+        cash_based = (cash_based // lot_size) * lot_size
+
+        shares = min(risk_based, cash_based)
+
+        if shares < lot_size:
+            dropped_cash += 1
+            continue
+
+        c["shares"] = int(shares)
+        c["notional_yen"] = int(round(entry * shares))
+        c["risk_yen"] = float(round(rps * shares, 2))
+        remaining_cash -= entry * shares
+
+        allocated.append(c)
+
+    payload["candidates"] = allocated
+    payload["count"] = len(allocated)
     payload["sig_hits_total"] = sig_hits_total
+    payload["sizing"] = {
+        "account_size": account_size,
+        "risk_per_trade": risk_per_trade,
+        "lot_size": lot_size,
+        "risk_yen_per_trade": float(round(risk_yen, 2)),
+        "remaining_cash": int(round(remaining_cash)),
+        "dropped_by_cash_or_lot": int(dropped_cash),
+    }
 
     # ALWAYS write outputs
     write_signals_and_latest(payload, date_str, session)
