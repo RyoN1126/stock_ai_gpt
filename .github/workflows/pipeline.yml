@@ -21,6 +21,8 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # ← results-historyへpushするために必要
 
     steps:
       # =========================
@@ -28,6 +30,8 @@ jobs:
       # =========================
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # ← ブランチ操作・push用
 
       # =========================
       # Setup Python
@@ -83,6 +87,7 @@ jobs:
           ls -la
           ls -la signals || true
           ls -la outputs || true
+          ls -la results || true
 
       # =========================
       # Evaluate latest signals
@@ -96,6 +101,7 @@ jobs:
       # =========================
       - name: Aggregate
         run: |
+          # 既存のaggregate.pyが --all を持ってる前提のまま
           python aggregate.py --all
 
       # =========================
@@ -119,13 +125,66 @@ jobs:
           date = parts[1] if len(parts) >= 3 else "unknown-date"
           sess = parts[2] if len(parts) >= 3 else "unknown-session"
 
+          # run識別子（重複しにくい）
+          run_id = os.environ.get("GITHUB_RUN_ID", "0")
+          run_number = os.environ.get("GITHUB_RUN_NUMBER", "0")
+
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
               f.write(f"RUN_DATE={date}\n")
               f.write(f"RUN_SESSION={sess}\n")
+              f.write(f"RUN_ID={run_id}\n")
+              f.write(f"RUN_NUMBER={run_number}\n")
           PY
 
       # =========================
-      # Upload artifacts (session+date)
+      # (②) Copy outputs into history folder (accumulate)
+      # =========================
+      - name: Stage history snapshot
+        run: |
+          mkdir -p "history/${RUN_DATE}/${RUN_SESSION}/run-${RUN_NUMBER}-${RUN_ID}"
+
+          # run単位で固めて保存（再実行しても衝突しにくい）
+          cp -r signals  "history/${RUN_DATE}/${RUN_SESSION}/run-${RUN_NUMBER}-${RUN_ID}/" || true
+          cp -r outputs  "history/${RUN_DATE}/${RUN_SESSION}/run-${RUN_NUMBER}-${RUN_ID}/" || true
+          cp -r results  "history/${RUN_DATE}/${RUN_SESSION}/run-${RUN_NUMBER}-${RUN_ID}/" || true
+
+          # ついでにトップにも “最新” を置く（見やすさ用）
+          mkdir -p "history/${RUN_DATE}/${RUN_SESSION}/latest"
+          rm -rf "history/${RUN_DATE}/${RUN_SESSION}/latest/signals" \
+                 "history/${RUN_DATE}/${RUN_SESSION}/latest/outputs" \
+                 "history/${RUN_DATE}/${RUN_SESSION}/latest/results" || true
+          cp -r signals "history/${RUN_DATE}/${RUN_SESSION}/latest/" || true
+          cp -r outputs "history/${RUN_DATE}/${RUN_SESSION}/latest/" || true
+          cp -r results "history/${RUN_DATE}/${RUN_SESSION}/latest/" || true
+
+      # =========================
+      # (②) Commit & push history to results-history branch
+      # =========================
+      - name: Push history to results-history branch
+        run: |
+          set -e
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # results-history が無ければ作る（初回）
+          if git show-ref --verify --quiet refs/remotes/origin/results-history; then
+            git checkout -B results-history origin/results-history
+          else
+            git checkout --orphan results-history
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+
+          # main(実行元)ブランチで作った history を取り込む
+          # （checkout先がresults-historyに切り替わっているので、ワークツリーにhistoryは残っている想定）
+          # 念のため、history以外はコミットしない
+          git add history
+
+          git commit -m "Add history ${RUN_DATE} ${RUN_SESSION} run-${RUN_NUMBER}-${RUN_ID}" || echo "No changes to commit"
+          git push origin results-history
+
+      # =========================
+      # (①) Upload artifacts (session+date)
       # =========================
       - name: Upload outputs
         uses: actions/upload-artifact@v4
@@ -135,4 +194,6 @@ jobs:
             signals/**
             outputs/**
             results/**
+            history/${{ env.RUN_DATE }}/${{ env.RUN_SESSION }}/run-${{ env.RUN_NUMBER }}-${{ env.RUN_ID }}/**
           if-no-files-found: warn
+          retention-days: 90
