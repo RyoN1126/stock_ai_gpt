@@ -1,0 +1,71 @@
+{
+  "version": "v3.1",
+  "asof": "2026-02-27 11:30:00+09:00",
+  "session": "morning",
+  "session_note": "Run after morning session. Use last 1H bar up to 11:30 JST.",
+  "target_date_jst": "2026-02-27",
+  "cutoff": "11:30",
+  "market_filter": "on",
+  "market_info": {
+    "ticker": "^N225",
+    "close": 58850.26953125,
+    "sma50": 53534.326640625,
+    "sma200": 45982.42400390625,
+    "ok": true
+  },
+  "max_positions": 2,
+  "count": 2,
+  "sig_hits_total": 58,
+  "drop_stats": {
+    "no_data_1h": 106,
+    "price_filter": 210,
+    "liquidity_filter": 2453,
+    "dist_filter": 834,
+    "confirm_1h": 436,
+    "risk_zero": 0,
+    "ta_missing": 0
+  },
+  "errors": [],
+  "candidates": [
+    {
+      "ticker": "4572.T",
+      "entry": 325.0,
+      "sl": 311.47,
+      "tp": 349.36,
+      "shares": 100,
+      "risk_per_share": 13.53167,
+      "rr": 1.8,
+      "atr_mult": 1.0,
+      "dist_to_ema20_pct": 1.07,
+      "sig_bar_utc": "2026-02-27 02:00:00+00:00",
+      "score": 3.5674,
+      "avg_vol_1h": 85807.8,
+      "notional_yen": 32500,
+      "risk_yen": 1353.17
+    },
+    {
+      "ticker": "5125.T",
+      "entry": 687.0,
+      "sl": 670.35,
+      "tp": 716.97,
+      "shares": 100,
+      "risk_per_share": 16.64905,
+      "rr": 1.8,
+      "atr_mult": 1.0,
+      "dist_to_ema20_pct": -0.23,
+      "sig_bar_utc": "2026-02-27 02:00:00+00:00",
+      "score": 2.956,
+      "avg_vol_1h": 11811.88,
+      "notional_yen": 68700,
+      "risk_yen": 1664.9
+    }
+  ],
+  "sizing": {
+    "account_size": 200000,
+    "risk_per_trade": 0.01,
+    "lot_size": 100,
+    "risk_yen_per_trade": 2000.0,
+    "remaining_cash": 98800,
+    "dropped_by_cash_or_lot": 0
+  }
+}
