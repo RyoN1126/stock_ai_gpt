@@ -226,6 +226,46 @@ jobs:
           git push origin results-history
 
       # =========================
+      # NEW: Build dashboard on results-history and publish to gh-pages
+      # =========================
+
+      - name: Build dashboard from results-history
+        run: |
+          set -e
+          # results-historyのhistory/を材料に site/index.html を作る
+          git checkout results-history
+          python tools/build_dashboard.py
+          ls -la site || true
+
+      - name: Publish dashboard to gh-pages
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # site/ を退避（gh-pages切替のため）
+          mkdir -p /tmp/site_backup
+          rm -rf /tmp/site_backup/site || true
+          cp -r site /tmp/site_backup/
+
+          # クリーンにして gh-pages へ
+          git reset --hard
+          git clean -fd
+
+          if git show-ref --verify --quiet refs/remotes/origin/gh-pages; then
+            git checkout -B gh-pages origin/gh-pages
+          else
+            git checkout --orphan gh-pages
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+
+          cp -r /tmp/site_backup/site/* ./
+
+          git add .
+          git commit -m "Update dashboard (run-${RUN_NUMBER}-${RUN_ID})" || echo "No changes"
+          git push origin gh-pages
+
+      # =========================
       # Upload artifacts
       # =========================
       - name: Upload outputs
@@ -237,5 +277,6 @@ jobs:
             outputs/**
             results/**
             history/${{ env.RUN_DATE }}/${{ env.RUN_SESSION }}/run-${{ env.RUN_NUMBER }}-${{ env.RUN_ID }}/**
+            site/**
           if-no-files-found: warn
           retention-days: 90
