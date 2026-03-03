@@ -229,12 +229,27 @@ jobs:
       # NEW: Build dashboard on results-history and publish to gh-pages
       # =========================
 
-      - name: Build dashboard from results-history
+      - name: Build dashboard (use main tools + results-history data)
         run: |
           set -e
-          # results-historyのhistory/を材料に site/index.html を作る
-          git checkout results-history
+
+          # mainブランチに戻って tools/ を使う
+          git checkout -B main origin/main
+
+          # results-history から history/ を作業ツリーへ取り込む（tmp経由）
+          git fetch origin results-history:results-history || true
+          rm -rf /tmp/history_from_results || true
+          mkdir -p /tmp/history_from_results
+
+          git --work-tree=/tmp/history_from_results checkout results-history -- history
+
+          # main作業ツリーに配置
+          rm -rf history || true
+          cp -r /tmp/history_from_results/history ./
+
+          # dashboard生成
           python tools/build_dashboard.py
+
           ls -la site || true
 
       - name: Publish dashboard to gh-pages
