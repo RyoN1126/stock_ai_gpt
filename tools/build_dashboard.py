@@ -10,7 +10,9 @@ from typing import Any, Dict, List, Tuple, Optional
 ROOT = "history"
 OUT_DIR = "site"
 
-RE_SIGNAL = re.compile(r"^signals_(\d{4}-\d{2}-\d{2})_(morning|close)\.json$")
+# signals_YYYY-MM-DD_session.json
+# signals_YYYY-MM-DD_session_HHMMSS.json も拾う（同日再実行時）
+RE_SIGNAL = re.compile(r"^signals_(\d{4}-\d{2}-\d{2})_(morning|close)(?:_\d{6})?\.json$")
 RE_RESULT  = re.compile(r"^result_(\d{4}-\d{2}-\d{2})_(morning|close)_.+\.json$")
 
 def read_json(path: str) -> Any:
@@ -564,4 +566,3 @@ def build():
     print("WRITE:", out_path)
 
 if __name__ == "__main__":
-    build()
