@@ -1,0 +1,55 @@
+{
+  "version": "v3.1",
+  "asof": "2026-03-03 15:30:00+09:00",
+  "session": "close",
+  "session_note": "Run after market close. Use last 1H bar up to 15:30 JST.",
+  "target_date_jst": "2026-03-03",
+  "cutoff": "15:30",
+  "market_filter": "on",
+  "market_info": {
+    "ticker": "^N225",
+    "close": 56638.73828125,
+    "sma50": 53808.15296875,
+    "sma200": 46187.36244140625,
+    "ok": true
+  },
+  "max_positions": 2,
+  "count": 1,
+  "sig_hits_total": 13,
+  "drop_stats": {
+    "no_data_1h": 105,
+    "price_filter": 222,
+    "liquidity_filter": 2432,
+    "dist_filter": 994,
+    "confirm_1h": 331,
+    "risk_zero": 0,
+    "ta_missing": 0
+  },
+  "errors": [],
+  "candidates": [
+    {
+      "ticker": "7317.T",
+      "entry": 1087.0,
+      "sl": 1085.36,
+      "tp": 1089.95,
+      "shares": 100,
+      "risk_per_share": 1.637308,
+      "rr": 1.8,
+      "atr_mult": 1.0,
+      "dist_to_ema20_pct": -0.29,
+      "sig_bar_utc": "2026-03-03 04:00:00+00:00",
+      "score": 2.8562,
+      "avg_vol_1h": 10781.98,
+      "notional_yen": 108700,
+      "risk_yen": 163.73
+    }
+  ],
+  "sizing": {
+    "account_size": 200000,
+    "risk_per_trade": 0.01,
+    "lot_size": 100,
+    "risk_yen_per_trade": 2000.0,
+    "remaining_cash": 91300,
+    "dropped_by_cash_or_lot": 1
+  }
+}
