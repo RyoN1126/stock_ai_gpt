@@ -14,42 +14,25 @@
     "ok": true
   },
   "max_positions": 2,
-  "count": 1,
-  "sig_hits_total": 132,
+  "count": 0,
+  "sig_hits_total": 134,
   "drop_stats": {
-    "no_data_1h": 105,
-    "price_filter": 224,
-    "liquidity_filter": 2432,
-    "dist_filter": 1070,
+    "no_data_1h": 103,
+    "price_filter": 223,
+    "liquidity_filter": 2434,
+    "dist_filter": 1069,
     "confirm_1h": 134,
     "risk_zero": 0,
     "ta_missing": 0
   },
   "errors": [],
-  "candidates": [
-    {
-      "ticker": "2857.T",
-      "entry": 645.8,
-      "sl": 644.38,
-      "tp": 648.35,
-      "shares": 300,
-      "risk_per_share": 1.418134,
-      "rr": 1.8,
-      "atr_mult": 1.0,
-      "dist_to_ema20_pct": 0.04,
-      "sig_bar_utc": "2026-03-03 06:00:00+00:00",
-      "score": 2.9813,
-      "avg_vol_1h": 20131.73,
-      "notional_yen": 193740,
-      "risk_yen": 425.44
-    }
-  ],
+  "candidates": [],
   "sizing": {
     "account_size": 200000,
     "risk_per_trade": 0.01,
     "lot_size": 100,
     "risk_yen_per_trade": 2000.0,
-    "remaining_cash": 6260,
-    "dropped_by_cash_or_lot": 1
+    "remaining_cash": 200000,
+    "dropped_by_cash_or_lot": 2
   }
 }
