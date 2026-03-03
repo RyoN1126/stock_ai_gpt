@@ -566,3 +566,4 @@ def build():
     print("WRITE:", out_path)
 
 if __name__ == "__main__":
+    build()
