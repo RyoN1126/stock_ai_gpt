@@ -5,70 +5,310 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Stock Dashboard</title>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; margin: 24px; }
-    .cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 12px; }
-    .card { border: 1px solid #ddd; border-radius: 10px; padding: 12px; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+      margin: 24px;
+      background: #0b0f17;
+      color: #e8eefc;
+    }
+    a { color: #9ecbff; }
+    .muted { color: #a8b3cf; font-size: 12px; }
+    .section { margin-top: 20px; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit,minmax(220px,1fr));
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .card {
+      border: 1px solid #1d2a4a;
+      border-radius: 14px;
+      padding: 12px;
+      background: #0f172a;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+    }
+    .big { font-size: 26px; font-weight: 800; }
+    .controls {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+      margin: 10px 0 16px;
+    }
+    .controls input, .controls select {
+      padding: 10px;
+      border: 1px solid #1d2a4a;
+      border-radius: 10px;
+      background: #0f172a;
+      color: #e8eefc;
+      outline: none;
+    }
+    .btn {
+      padding: 10px 12px;
+      border: 1px solid #1d2a4a;
+      border-radius: 10px;
+      background: #0f172a;
+      color: #e8eefc;
+      cursor: pointer;
+    }
+    .btn.active {
+      border-color: #9ecbff;
+      box-shadow: 0 0 0 3px rgba(158,203,255,0.12);
+    }
+
     table { border-collapse: collapse; width: 100%; margin: 10px 0 24px; }
-    th, td { border: 1px solid #ddd; padding: 8px; font-size: 14px; }
-    th { background: #f6f6f6; text-align: left; }
-    .muted { color: #666; font-size: 12px; }
+    th, td {
+      border: 1px solid #1d2a4a;
+      padding: 8px;
+      font-size: 14px;
+    }
+    th {
+      background: #0f172a;
+      text-align: left;
+      position: sticky; top: 0;
+    }
+    tr:hover td { background: rgba(158,203,255,0.06); }
+
+    /* status colors */
+    .pill {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 12px;
+      border: 1px solid #1d2a4a;
+    }
+    .st.win  { }
+    .st.loss { }
+    .st.open { }
+    .st.nf   { }
+
+    .pill.st.win  { background: rgba(34,197,94,0.16); color: #7dffb0; border-color: rgba(34,197,94,0.35); }
+    .pill.st.loss { background: rgba(239,68,68,0.16); color: #ff9a9a; border-color: rgba(239,68,68,0.35); }
+    .pill.st.open { background: rgba(59,130,246,0.16); color: #a8d0ff; border-color: rgba(59,130,246,0.35); }
+    .pill.st.nf   { background: rgba(148,163,184,0.14); color: #d2dae7; border-color: rgba(148,163,184,0.30); }
+
+    /* candidate spotlight */
+    .spotlight {
+      border: 1px solid rgba(158,203,255,0.35);
+      background: radial-gradient(1200px 400px at 30% 0%, rgba(158,203,255,0.12), transparent 60%), #0f172a;
+      border-radius: 18px;
+      padding: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+    .cand-header {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .cand-title {
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 0.2px;
+    }
+    .cand-sub {
+      color: #a8b3cf;
+      font-size: 12px;
+    }
+    .cand-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit,minmax(260px,1fr));
+      gap: 12px;
+    }
+    .cand-card {
+      border: 1px solid #1d2a4a;
+      border-radius: 16px;
+      padding: 12px;
+      background: rgba(11,15,23,0.40);
+    }
+    .cand-top {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px;
+    }
+    .cand-ticker {
+      font-size: 22px;
+      font-weight: 900;
+    }
+    .cand-score {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(158,203,255,0.35);
+      color: #cfe6ff;
+      background: rgba(158,203,255,0.10);
+      font-weight: 800;
+    }
+    .cand-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .cand-grid .k {
+      display: inline-block;
+      width: 92px;
+      color: #a8b3cf;
+      font-size: 12px;
+      margin-right: 6px;
+    }
+    .cand-grid .v {
+      font-weight: 900;
+      font-size: 14px;
+    }
+    .cand-note {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #a8b3cf;
+    }
   </style>
 </head>
 <body>
   <h1>Stock Dashboard</h1>
-  <div class="muted">Generated: 2026-03-03 07:38:02 (from results-history)</div>
+  <div class="muted">Generated: 2026-03-03 08:55:19 / Latest target date: 2026-03-03</div>
 
-  <h2>Summary</h2>
-  <div class="cards">
-    <div class="card"><div class="muted">Total trades</div><div style="font-size:24px"><b>47</b></div></div>
-    <div class="card"><div class="muted">Resolved</div><div style="font-size:24px"><b>20</b></div></div>
-    <div class="card"><div class="muted">WIN / LOSS</div><div style="font-size:24px"><b>12 / 8</b></div></div>
-    <div class="card"><div class="muted">OPEN / NOT_FILLED</div><div style="font-size:24px"><b>27 / 0</b></div></div>
-    <div class="card"><div class="muted">WinRate (resolved)</div><div style="font-size:24px"><b>60.00%</b></div></div>
+  <div class="section">
+    <h2>Summary</h2>
+    <div class="cards">
+      <div class="card"><div class="muted">Total trades</div><div class="big">19</div></div>
+      <div class="card"><div class="muted">Resolved</div><div class="big">10</div></div>
+      <div class="card"><div class="muted">WIN / LOSS</div><div class="big">7 / 3</div></div>
+      <div class="card"><div class="muted">OPEN / NOT_FILLED</div><div class="big">9 / 0</div></div>
+      <div class="card"><div class="muted">WinRate (resolved)</div><div class="big">70.00%</div></div>
+    </div>
   </div>
 
-  <h2>Latest “Buy Candidates” (today)</h2>
-  
-        <h3>Latest Signals: 2026-03-03 / morning</h3>
-        <table>
-          <thead><tr><th>Ticker</th><th>Entry</th><th>SL</th><th>TP</th><th>Shares</th><th>Notional</th><th>Score</th></tr></thead>
-          <tbody>
-            <tr><td><b>8285.T</b></td><td>715.0</td><td>700.48</td><td>741.13</td><td>100</td><td>71500</td><td>3.6287</td></tr>
-          </tbody>
-        </table>
-        
-        <h3>Latest Signals: 2026-03-03 / close</h3>
-        <table>
-          <thead><tr><th>Ticker</th><th>Entry</th><th>SL</th><th>TP</th><th>Shares</th><th>Notional</th><th>Score</th></tr></thead>
-          <tbody>
-            <tr><td><b>2857.T</b></td><td>645.8</td><td>644.38</td><td>648.35</td><td>300</td><td>193740</td><td>2.9813</td></tr>
-          </tbody>
-        </table>
-        
-        <h3>Latest Signals: 2026-02-20 / close</h3>
-        <table>
-          <thead><tr><th>Ticker</th><th>Entry</th><th>SL</th><th>TP</th><th>Shares</th><th>Notional</th><th>Score</th></tr></thead>
-          <tbody>
-            <tr><td><b>4572.T</b></td><td>325.0</td><td>311.47</td><td>349.36</td><td>100</td><td>32500</td><td>3.5674</td></tr><tr><td><b>5125.T</b></td><td>687.0</td><td>670.35</td><td>716.97</td><td>100</td><td>68700</td><td>2.956</td></tr>
-          </tbody>
-        </table>
-        
+  <div class="section spotlight">
+    
+              <div class="cand-block">
+                <div class="cand-header">
+                  <div class="cand-title">Latest Buy Candidates</div>
+                  <div class="cand-sub">2026-03-03 / morning</div>
+                </div>
+                <div class="cand-cards">
+                  
+                  <div class="cand-card">
+                    <div class="cand-top">
+                      <div class="cand-ticker">8285.T</div>
+                      <div class="cand-score">score 3.6287</div>
+                    </div>
+                    <div class="cand-grid">
+                      <div><span class="k">Entry</span><span class="v">715.0</span></div>
+                      <div><span class="k">SL</span><span class="v">700.48</span></div>
+                      <div><span class="k">TP</span><span class="v">741.13</span></div>
+                      <div><span class="k">RR</span><span class="v">1.8</span></div>
+                      <div><span class="k">Shares</span><span class="v">100</span></div>
+                      <div><span class="k">Notional</span><span class="v">71500</span></div>
+                      <div><span class="k">Risk(¥)</span><span class="v">1451.76</span></div>
+                    </div>
+                    <div class="cand-note">注文目安：715.0 付近（ルール通り）</div>
+                  </div>
+                
+                </div>
+              </div>
+            
+  </div>
 
-  <h2>OPEN positions (if you had entered) — Watchlist</h2>
-  <div class="muted">※ これは「過去にエントリーしていたら未決済」を示す一覧。今持ってないなら“買うリスト”ではなく“検証上の未決済”です。</div>
-  <table>
-    <thead><tr><th>Date</th><th>Session</th><th>Ticker</th><th>Entry</th><th>SL</th><th>TP</th><th>Status</th></tr></thead>
-    <tbody>
-      <tr><td>2026-03-03</td><td>morning</td><td><b>8285.T</b></td><td>715.0</td><td>700.48</td><td>741.13</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>7354.T</b></td><td>338.0</td><td>329.37</td><td>353.54</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>5125.T</b></td><td>687.0</td><td>670.35</td><td>716.97</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>4880.T</b></td><td>406.0</td><td>395.71</td><td>424.52</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>4572.T</b></td><td>325.0</td><td>311.47</td><td>349.36</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>4293.T</b></td><td>404.0</td><td>395.94</td><td>418.5</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>4166.T</b></td><td>727.0</td><td>715.52</td><td>747.67</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>7354.T</b></td><td>338.0</td><td>329.37</td><td>353.54</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>7317.T</b></td><td>1087.0</td><td>1085.36</td><td>1089.95</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>5125.T</b></td><td>687.0</td><td>670.35</td><td>716.97</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>4880.T</b></td><td>406.0</td><td>395.71</td><td>424.52</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>4572.T</b></td><td>325.0</td><td>311.47</td><td>349.36</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>4293.T</b></td><td>404.0</td><td>395.94</td><td>418.5</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>4166.T</b></td><td>727.0</td><td>715.52</td><td>747.67</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>2857.T</b></td><td>645.8</td><td>644.38</td><td>648.35</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>7354.T</b></td><td>338.0</td><td>329.37</td><td>353.54</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>5125.T</b></td><td>687.0</td><td>670.35</td><td>716.97</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>4880.T</b></td><td>406.0</td><td>395.71</td><td>424.52</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>4572.T</b></td><td>325.0</td><td>311.47</td><td>349.36</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>4293.T</b></td><td>404.0</td><td>395.94</td><td>418.5</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>4166.T</b></td><td>727.0</td><td>715.52</td><td>747.67</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>7354.T</b></td><td>338.0</td><td>329.37</td><td>353.54</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>5125.T</b></td><td>687.0</td><td>670.35</td><td>716.97</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>4880.T</b></td><td>406.0</td><td>395.71</td><td>424.52</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>4572.T</b></td><td>325.0</td><td>311.47</td><td>349.36</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>4293.T</b></td><td>404.0</td><td>395.94</td><td>418.5</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>4166.T</b></td><td>727.0</td><td>715.52</td><td>747.67</td><td>OPEN</td></tr>
-    </tbody>
-  </table>
+  <div class="section">
+    <h2>OPEN (if you had entered) — Watchlist</h2>
+    <div class="muted">※ これは「過去に入っていたら未決済」。今持ってないなら“買い候補”ではなく“検証の未決済”。</div>
+    <table id="openTable">
+      <thead><tr><th>Date</th><th>Session</th><th>Ticker</th><th>Entry</th><th>SL</th><th>TP</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr class='st open' data-date='2026-03-03' data-session='close' data-status='OPEN' data-ticker='7317.T'><td>2026-03-03</td><td>close</td><td><b>7317.T</b></td><td>1087.0</td><td>1085.36</td><td>1089.95</td><td><span class='pill st open'>OPEN</span></td></tr><tr class='st open' data-date='2026-03-03' data-session='close' data-status='OPEN' data-ticker='2857.T'><td>2026-03-03</td><td>close</td><td><b>2857.T</b></td><td>645.8</td><td>644.38</td><td>648.35</td><td><span class='pill st open'>OPEN</span></td></tr><tr class='st open' data-date='2026-03-03' data-session='morning' data-status='OPEN' data-ticker='8285.T'><td>2026-03-03</td><td>morning</td><td><b>8285.T</b></td><td>715.0</td><td>700.48</td><td>741.13</td><td><span class='pill st open'>OPEN</span></td></tr><tr class='st open' data-date='2026-03-02' data-session='morning' data-status='OPEN' data-ticker='7354.T'><td>2026-03-02</td><td>morning</td><td><b>7354.T</b></td><td>338.0</td><td>329.37</td><td>353.54</td><td><span class='pill st open'>OPEN</span></td></tr><tr class='st open' data-date='2026-03-02' data-session='morning' data-status='OPEN' data-ticker='4166.T'><td>2026-03-02</td><td>morning</td><td><b>4166.T</b></td><td>727.0</td><td>715.52</td><td>747.67</td><td><span class='pill st open'>OPEN</span></td></tr><tr class='st open' data-date='2026-02-27' data-session='morning' data-status='OPEN' data-ticker='5125.T'><td>2026-02-27</td><td>morning</td><td><b>5125.T</b></td><td>687.0</td><td>670.35</td><td>716.97</td><td><span class='pill st open'>OPEN</span></td></tr><tr class='st open' data-date='2026-02-27' data-session='morning' data-status='OPEN' data-ticker='4572.T'><td>2026-02-27</td><td>morning</td><td><b>4572.T</b></td><td>325.0</td><td>311.47</td><td>349.36</td><td><span class='pill st open'>OPEN</span></td></tr><tr class='st open' data-date='2026-02-25' data-session='morning' data-status='OPEN' data-ticker='4880.T'><td>2026-02-25</td><td>morning</td><td><b>4880.T</b></td><td>406.0</td><td>395.71</td><td>424.52</td><td><span class='pill st open'>OPEN</span></td></tr><tr class='st open' data-date='2026-02-24' data-session='close' data-status='OPEN' data-ticker='4293.T'><td>2026-02-24</td><td>close</td><td><b>4293.T</b></td><td>404.0</td><td>395.94</td><td>418.5</td><td><span class='pill st open'>OPEN</span></td></tr>
+      </tbody>
+    </table>
+  </div>
 
-  <h2>All results (latest per date/session/ticker)</h2>
-  <table>
-    <thead><tr><th>Date</th><th>Session</th><th>Ticker</th><th>Entry</th><th>SL</th><th>TP</th><th>Status</th></tr></thead>
-    <tbody>
-      <tr><td>2026-03-03</td><td>morning</td><td><b>8613.T</b></td><td>1090.0</td><td>1079.42</td><td>1109.04</td><td>WIN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>6584.T</b></td><td>841.0</td><td>825.13</td><td>869.57</td><td>WIN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>1887.T</b></td><td>674.0</td><td>663.41</td><td>693.06</td><td>WIN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>8285.T</b></td><td>715.0</td><td>700.48</td><td>741.13</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>7354.T</b></td><td>338.0</td><td>329.37</td><td>353.54</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>5125.T</b></td><td>687.0</td><td>670.35</td><td>716.97</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>4880.T</b></td><td>406.0</td><td>395.71</td><td>424.52</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>4572.T</b></td><td>325.0</td><td>311.47</td><td>349.36</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>4293.T</b></td><td>404.0</td><td>395.94</td><td>418.5</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>4166.T</b></td><td>727.0</td><td>715.52</td><td>747.67</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>7455.T</b></td><td>578.0</td><td>577.22</td><td>579.41</td><td>LOSS</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>2157.T</b></td><td>1166.0</td><td>1150.19</td><td>1194.46</td><td>LOSS</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>8613.T</b></td><td>1090.0</td><td>1079.42</td><td>1109.04</td><td>WIN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>6584.T</b></td><td>841.0</td><td>825.13</td><td>869.57</td><td>WIN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>1887.T</b></td><td>674.0</td><td>663.41</td><td>693.06</td><td>WIN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>7354.T</b></td><td>338.0</td><td>329.37</td><td>353.54</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>7317.T</b></td><td>1087.0</td><td>1085.36</td><td>1089.95</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>5125.T</b></td><td>687.0</td><td>670.35</td><td>716.97</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>4880.T</b></td><td>406.0</td><td>395.71</td><td>424.52</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>4572.T</b></td><td>325.0</td><td>311.47</td><td>349.36</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>4293.T</b></td><td>404.0</td><td>395.94</td><td>418.5</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>4166.T</b></td><td>727.0</td><td>715.52</td><td>747.67</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>2857.T</b></td><td>645.8</td><td>644.38</td><td>648.35</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>7455.T</b></td><td>578.0</td><td>577.22</td><td>579.41</td><td>LOSS</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>2157.T</b></td><td>1166.0</td><td>1150.19</td><td>1194.46</td><td>LOSS</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>8613.T</b></td><td>1090.0</td><td>1079.42</td><td>1109.04</td><td>WIN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>6584.T</b></td><td>841.0</td><td>825.13</td><td>869.57</td><td>WIN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>1887.T</b></td><td>674.0</td><td>663.41</td><td>693.06</td><td>WIN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>7354.T</b></td><td>338.0</td><td>329.37</td><td>353.54</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>5125.T</b></td><td>687.0</td><td>670.35</td><td>716.97</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>4880.T</b></td><td>406.0</td><td>395.71</td><td>424.52</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>4572.T</b></td><td>325.0</td><td>311.47</td><td>349.36</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>4293.T</b></td><td>404.0</td><td>395.94</td><td>418.5</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>4166.T</b></td><td>727.0</td><td>715.52</td><td>747.67</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>7455.T</b></td><td>578.0</td><td>577.22</td><td>579.41</td><td>LOSS</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>2157.T</b></td><td>1166.0</td><td>1150.19</td><td>1194.46</td><td>LOSS</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>8613.T</b></td><td>1090.0</td><td>1079.42</td><td>1109.04</td><td>WIN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>6584.T</b></td><td>841.0</td><td>825.13</td><td>869.57</td><td>WIN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>1887.T</b></td><td>674.0</td><td>663.41</td><td>693.06</td><td>WIN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>7354.T</b></td><td>338.0</td><td>329.37</td><td>353.54</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>5125.T</b></td><td>687.0</td><td>670.35</td><td>716.97</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>4880.T</b></td><td>406.0</td><td>395.71</td><td>424.52</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>4572.T</b></td><td>325.0</td><td>311.47</td><td>349.36</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>4293.T</b></td><td>404.0</td><td>395.94</td><td>418.5</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>4166.T</b></td><td>727.0</td><td>715.52</td><td>747.67</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>7455.T</b></td><td>578.0</td><td>577.22</td><td>579.41</td><td>LOSS</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>2157.T</b></td><td>1166.0</td><td>1150.19</td><td>1194.46</td><td>LOSS</td></tr>
-    </tbody>
-  </table>
+  <div class="section">
+    <h2>All Results (latest per date/session/ticker)</h2>
+    <div class="controls">
+      <input id="q" type="text" placeholder="Search ticker (e.g. 8285.T) ..." />
+      <select id="status">
+        <option value="">All status</option>
+        <option value="OPEN">OPEN</option>
+        <option value="WIN">WIN</option>
+        <option value="LOSS">LOSS</option>
+        <option value="NOT_FILLED">NOT_FILLED</option>
+      </select>
+
+      <button class="btn active" data-range="all">All</button>
+      <button class="btn" data-range="10">Last 10 days</button>
+      <button class="btn" data-range="30">Last 30 days</button>
+
+      <span class="muted" id="count"></span>
+    </div>
+
+    <table id="allTable">
+      <thead><tr><th>Date</th><th>Session</th><th>Ticker</th><th>Entry</th><th>SL</th><th>TP</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr class='st open' data-date='2026-03-03' data-session='close' data-status='OPEN' data-ticker='7317.T'><td>2026-03-03</td><td>close</td><td><b>7317.T</b></td><td>1087.0</td><td>1085.36</td><td>1089.95</td><td><span class='pill st open'>OPEN</span></td></tr><tr class='st open' data-date='2026-03-03' data-session='close' data-status='OPEN' data-ticker='2857.T'><td>2026-03-03</td><td>close</td><td><b>2857.T</b></td><td>645.8</td><td>644.38</td><td>648.35</td><td><span class='pill st open'>OPEN</span></td></tr><tr class='st open' data-date='2026-03-03' data-session='morning' data-status='OPEN' data-ticker='8285.T'><td>2026-03-03</td><td>morning</td><td><b>8285.T</b></td><td>715.0</td><td>700.48</td><td>741.13</td><td><span class='pill st open'>OPEN</span></td></tr><tr class='st open' data-date='2026-03-02' data-session='morning' data-status='OPEN' data-ticker='7354.T'><td>2026-03-02</td><td>morning</td><td><b>7354.T</b></td><td>338.0</td><td>329.37</td><td>353.54</td><td><span class='pill st open'>OPEN</span></td></tr><tr class='st open' data-date='2026-03-02' data-session='morning' data-status='OPEN' data-ticker='4166.T'><td>2026-03-02</td><td>morning</td><td><b>4166.T</b></td><td>727.0</td><td>715.52</td><td>747.67</td><td><span class='pill st open'>OPEN</span></td></tr><tr class='st open' data-date='2026-02-27' data-session='morning' data-status='OPEN' data-ticker='5125.T'><td>2026-02-27</td><td>morning</td><td><b>5125.T</b></td><td>687.0</td><td>670.35</td><td>716.97</td><td><span class='pill st open'>OPEN</span></td></tr><tr class='st open' data-date='2026-02-27' data-session='morning' data-status='OPEN' data-ticker='4572.T'><td>2026-02-27</td><td>morning</td><td><b>4572.T</b></td><td>325.0</td><td>311.47</td><td>349.36</td><td><span class='pill st open'>OPEN</span></td></tr><tr class='st loss' data-date='2026-02-26' data-session='morning' data-status='LOSS' data-ticker='2157.T'><td>2026-02-26</td><td>morning</td><td><b>2157.T</b></td><td>1166.0</td><td>1150.19</td><td>1194.46</td><td><span class='pill st loss'>LOSS</span></td></tr><tr class='st win' data-date='2026-02-25' data-session='morning' data-status='WIN' data-ticker='8613.T'><td>2026-02-25</td><td>morning</td><td><b>8613.T</b></td><td>1090.0</td><td>1079.42</td><td>1109.04</td><td><span class='pill st win'>WIN</span></td></tr><tr class='st open' data-date='2026-02-25' data-session='morning' data-status='OPEN' data-ticker='4880.T'><td>2026-02-25</td><td>morning</td><td><b>4880.T</b></td><td>406.0</td><td>395.71</td><td>424.52</td><td><span class='pill st open'>OPEN</span></td></tr><tr class='st open' data-date='2026-02-24' data-session='close' data-status='OPEN' data-ticker='4293.T'><td>2026-02-24</td><td>close</td><td><b>4293.T</b></td><td>404.0</td><td>395.94</td><td>418.5</td><td><span class='pill st open'>OPEN</span></td></tr><tr class='st loss' data-date='2026-02-23' data-session='close' data-status='LOSS' data-ticker='7455.T'><td>2026-02-23</td><td>close</td><td><b>7455.T</b></td><td>578.0</td><td>577.22</td><td>579.41</td><td><span class='pill st loss'>LOSS</span></td></tr><tr class='st loss' data-date='2026-02-23' data-session='morning' data-status='LOSS' data-ticker='7455.T'><td>2026-02-23</td><td>morning</td><td><b>7455.T</b></td><td>578.0</td><td>577.22</td><td>579.41</td><td><span class='pill st loss'>LOSS</span></td></tr><tr class='st win' data-date='2026-02-22' data-session='close' data-status='WIN' data-ticker='1887.T'><td>2026-02-22</td><td>close</td><td><b>1887.T</b></td><td>674.0</td><td>663.41</td><td>693.06</td><td><span class='pill st win'>WIN</span></td></tr><tr class='st win' data-date='2026-02-22' data-session='morning' data-status='WIN' data-ticker='1887.T'><td>2026-02-22</td><td>morning</td><td><b>1887.T</b></td><td>674.0</td><td>663.41</td><td>693.06</td><td><span class='pill st win'>WIN</span></td></tr><tr class='st win' data-date='2026-02-21' data-session='close' data-status='WIN' data-ticker='1887.T'><td>2026-02-21</td><td>close</td><td><b>1887.T</b></td><td>674.0</td><td>663.41</td><td>693.06</td><td><span class='pill st win'>WIN</span></td></tr><tr class='st win' data-date='2026-02-21' data-session='morning' data-status='WIN' data-ticker='1887.T'><td>2026-02-21</td><td>morning</td><td><b>1887.T</b></td><td>674.0</td><td>663.41</td><td>693.06</td><td><span class='pill st win'>WIN</span></td></tr><tr class='st win' data-date='2026-02-20' data-session='close' data-status='WIN' data-ticker='1887.T'><td>2026-02-20</td><td>close</td><td><b>1887.T</b></td><td>674.0</td><td>663.41</td><td>693.06</td><td><span class='pill st win'>WIN</span></td></tr><tr class='st win' data-date='2026-02-20' data-session='morning' data-status='WIN' data-ticker='6584.T'><td>2026-02-20</td><td>morning</td><td><b>6584.T</b></td><td>841.0</td><td>825.13</td><td>869.57</td><td><span class='pill st win'>WIN</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+<script>
+(function() {
+  const q = document.getElementById("q");
+  const status = document.getElementById("status");
+  const table = document.getElementById("allTable");
+  const count = document.getElementById("count");
+  const btns = Array.from(document.querySelectorAll(".btn[data-range]"));
+
+  let rangeDays = "all";
+
+  function parseDate(s) {
+    const parts = s.split("-");
+    if (parts.length !== 3) return null;
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    return new Date(y, m, d);
+  }
+
+  function withinRange(dateStr) {
+    if (rangeDays === "all") return true;
+    const d = parseDate(dateStr);
+    if (!d) return true;
+    const now = new Date();
+    const ms = now.getTime() - d.getTime();
+    const days = ms / (1000 * 60 * 60 * 24);
+    return days <= parseInt(rangeDays, 10);
+  }
+
+  function apply() {
+    const needle = (q.value || "").trim().toUpperCase();
+    const st = status.value;
+
+    const rows = Array.from(table.querySelectorAll("tbody tr"));
+    let visible = 0;
+
+    for (const tr of rows) {
+      const date = tr.getAttribute("data-date") || "";
+      const ticker = (tr.getAttribute("data-ticker") || "").toUpperCase();
+      const s = tr.getAttribute("data-status") || "";
+
+      let ok = true;
+      if (needle && !ticker.includes(needle)) ok = false;
+      if (st && s !== st) ok = false;
+      if (!withinRange(date)) ok = false;
+
+      tr.style.display = ok ? "" : "none";
+      if (ok) visible++;
+    }
+    count.textContent = visible + " rows";
+  }
+
+  q.addEventListener("input", apply);
+  status.addEventListener("change", apply);
+
+  btns.forEach(b => {
+    b.addEventListener("click", () => {
+      btns.forEach(x => x.classList.remove("active"));
+      b.classList.add("active");
+      rangeDays = b.getAttribute("data-range");
+      apply();
+    });
+  });
+
+  apply();
+})();
+</script>
+
 </body>
 </html>
