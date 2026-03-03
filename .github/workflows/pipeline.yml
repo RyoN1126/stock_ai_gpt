@@ -138,10 +138,8 @@ jobs:
         run: |
           python - << 'PY'
           import json, os, glob
-          meta_path = "outputs/today_candidates_latest_meta.json"
 
-          # backfill の場合、latest_meta が存在しない/最新が不明になるケースがあるので、
-          # signals配下から一番新しい signals_*.json を拾って RUN_DATE/RUN_SESSION を決めるフォールバックを用意
+          meta_path = "outputs/today_candidates_latest_meta.json"
           run_id = os.environ.get("GITHUB_RUN_ID", "0")
           run_number = os.environ.get("GITHUB_RUN_NUMBER", "0")
 
@@ -170,11 +168,12 @@ jobs:
               f.write(f"RUN_SESSION={sess}\n")
               f.write(f"RUN_ID={run_id}\n")
               f.write(f"RUN_NUMBER={run_number}\n")
+
           print("RUN_DATE", date, "RUN_SESSION", sess, "RUN_ID", run_id, "RUN_NUMBER", run_number)
           PY
 
       # =========================
-      # (②) Stage history snapshot (accumulate)
+      # Stage history snapshot (accumulate)
       # =========================
       - name: Stage history snapshot
         run: |
@@ -193,7 +192,7 @@ jobs:
           cp -r results "history/${RUN_DATE}/${RUN_SESSION}/latest/" || true
 
       # =========================
-      # (②) Commit & push history to results-history branch
+      # Push history to results-history branch (FIX: untracked overwrite)
       # =========================
       - name: Push history to results-history branch
         run: |
@@ -202,6 +201,16 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+          # 1) history を退避
+          mkdir -p /tmp/history_backup
+          rm -rf /tmp/history_backup/history || true
+          cp -r history /tmp/history_backup/ || true
+
+          # 2) untracked含めて作業ツリーをクリーン化（checkout衝突回避）
+          git reset --hard
+          git clean -fd
+
+          # 3) results-history ブランチへ切替（無ければ作成）
           if git show-ref --verify --quiet refs/remotes/origin/results-history; then
             git checkout -B results-history origin/results-history
           else
@@ -209,13 +218,15 @@ jobs:
             git rm -rf . >/dev/null 2>&1 || true
           fi
 
-          # history だけコミット
+          # 4) history を戻してコミット
+          cp -r /tmp/history_backup/history ./
+
           git add history
           git commit -m "Add history ${RUN_DATE} ${RUN_SESSION} run-${RUN_NUMBER}-${RUN_ID}" || echo "No changes to commit"
           git push origin results-history
 
       # =========================
-      # (①) Upload artifacts
+      # Upload artifacts
       # =========================
       - name: Upload outputs
         uses: actions/upload-artifact@v4

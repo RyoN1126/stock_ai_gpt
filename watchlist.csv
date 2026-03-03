@@ -1,0 +1,17 @@
+date,session,ticker,entry,sl,tp,status,shares_used,notional_yen,reason,source_file
+2026-03-02,morning,7354.T,338.0,329.37,353.54,OPEN,200,67600.0,no_exit_within_window,result_2026-03-02_morning_20260302-100708Z.json
+2026-03-02,morning,4166.T,727.0,715.52,747.67,OPEN,100,72700.0,no_exit_within_window,result_2026-03-02_morning_20260302-100708Z.json
+2026-02-27,morning,5125.T,687.0,670.35,716.97,OPEN,100,68700.0,no_exit_within_window,result_2026-02-27_morning_20260302-113749Z.json
+2026-02-27,morning,4572.T,325.0,311.47,349.36,OPEN,100,32500.0,no_exit_within_window,result_2026-02-27_morning_20260302-113749Z.json
+2026-02-26,morning,2157.T,1166.0,1150.19,1194.46,LOSS,100,116600.0,sl_touched,result_2026-02-26_morning_20260302-120508Z.json
+2026-02-25,morning,8613.T,1090.0,1079.42,1109.04,WIN,100,109000.0,tp_touched,result_2026-02-25_morning_20260302-123159Z.json
+2026-02-25,morning,4880.T,406.0,395.71,424.52,OPEN,100,40600.0,no_exit_within_window,result_2026-02-25_morning_20260302-123159Z.json
+2026-02-24,close,4293.T,404.0,395.94,418.5,OPEN,200,80800.0,no_exit_within_window,result_2026-02-24_close_20260302-131221Z.json
+2026-02-23,morning,7455.T,578.0,577.22,579.41,LOSS,300,173400.0,sl_touched,result_2026-02-23_morning_20260302-132641Z.json
+2026-02-23,close,7455.T,578.0,577.22,579.41,LOSS,300,173400.0,sl_touched,result_2026-02-23_close_20260302-134121Z.json
+2026-02-22,morning,1887.T,674.0,663.41,693.06,WIN,100,67400.0,tp_touched,result_2026-02-22_morning_20260302-135421Z.json
+2026-02-22,close,1887.T,674.0,663.41,693.06,WIN,100,67400.0,tp_touched,result_2026-02-22_close_20260302-140803Z.json
+2026-02-21,morning,1887.T,674.0,663.41,693.06,WIN,100,67400.0,tp_touched,result_2026-02-21_morning_20260302-142155Z.json
+2026-02-21,close,1887.T,674.0,663.41,693.06,WIN,100,67400.0,tp_touched,result_2026-02-21_close_20260302-143556Z.json
+2026-02-20,morning,6584.T,841.0,825.13,869.57,WIN,100,84100.0,tp_touched,result_2026-02-20_morning_20260302-144951Z.json
+2026-02-20,close,1887.T,674.0,663.41,693.06,WIN,100,67400.0,tp_touched,result_2026-02-20_close_20260302-150342Z.json
