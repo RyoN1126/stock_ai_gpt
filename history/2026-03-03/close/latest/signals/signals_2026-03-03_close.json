@@ -8,31 +8,48 @@
   "market_filter": "on",
   "market_info": {
     "ticker": "^N225",
-    "close": 56256.1015625,
-    "sma50": 53800.500234375,
-    "sma200": 46185.4492578125,
+    "close": 56279.05078125,
+    "sma50": 53800.95921875,
+    "sma200": 46185.56400390625,
     "ok": true
   },
   "max_positions": 2,
-  "count": 0,
-  "sig_hits_total": 78,
+  "count": 1,
+  "sig_hits_total": 132,
   "drop_stats": {
     "no_data_1h": 105,
     "price_filter": 224,
-    "liquidity_filter": 2430,
-    "dist_filter": 1039,
-    "confirm_1h": 221,
+    "liquidity_filter": 2432,
+    "dist_filter": 1070,
+    "confirm_1h": 134,
     "risk_zero": 0,
     "ta_missing": 0
   },
   "errors": [],
-  "candidates": [],
+  "candidates": [
+    {
+      "ticker": "2857.T",
+      "entry": 645.8,
+      "sl": 644.38,
+      "tp": 648.35,
+      "shares": 300,
+      "risk_per_share": 1.418134,
+      "rr": 1.8,
+      "atr_mult": 1.0,
+      "dist_to_ema20_pct": 0.04,
+      "sig_bar_utc": "2026-03-03 06:00:00+00:00",
+      "score": 2.9813,
+      "avg_vol_1h": 20131.73,
+      "notional_yen": 193740,
+      "risk_yen": 425.44
+    }
+  ],
   "sizing": {
     "account_size": 200000,
     "risk_per_trade": 0.01,
     "lot_size": 100,
     "risk_yen_per_trade": 2000.0,
-    "remaining_cash": 200000,
-    "dropped_by_cash_or_lot": 2
+    "remaining_cash": 6260,
+    "dropped_by_cash_or_lot": 1
   }
 }
