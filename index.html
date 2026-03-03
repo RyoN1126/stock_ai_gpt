@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Stock Dashboard</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; margin: 24px; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 12px; }
+    .card { border: 1px solid #ddd; border-radius: 10px; padding: 12px; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0 24px; }
+    th, td { border: 1px solid #ddd; padding: 8px; font-size: 14px; }
+    th { background: #f6f6f6; text-align: left; }
+    .muted { color: #666; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Stock Dashboard</h1>
+  <div class="muted">Generated: 2026-03-03 07:38:02 (from results-history)</div>
+
+  <h2>Summary</h2>
+  <div class="cards">
+    <div class="card"><div class="muted">Total trades</div><div style="font-size:24px"><b>47</b></div></div>
+    <div class="card"><div class="muted">Resolved</div><div style="font-size:24px"><b>20</b></div></div>
+    <div class="card"><div class="muted">WIN / LOSS</div><div style="font-size:24px"><b>12 / 8</b></div></div>
+    <div class="card"><div class="muted">OPEN / NOT_FILLED</div><div style="font-size:24px"><b>27 / 0</b></div></div>
+    <div class="card"><div class="muted">WinRate (resolved)</div><div style="font-size:24px"><b>60.00%</b></div></div>
+  </div>
+
+  <h2>Latest “Buy Candidates” (today)</h2>
+  
+        <h3>Latest Signals: 2026-03-03 / morning</h3>
+        <table>
+          <thead><tr><th>Ticker</th><th>Entry</th><th>SL</th><th>TP</th><th>Shares</th><th>Notional</th><th>Score</th></tr></thead>
+          <tbody>
+            <tr><td><b>8285.T</b></td><td>715.0</td><td>700.48</td><td>741.13</td><td>100</td><td>71500</td><td>3.6287</td></tr>
+          </tbody>
+        </table>
+        
+        <h3>Latest Signals: 2026-03-03 / close</h3>
+        <table>
+          <thead><tr><th>Ticker</th><th>Entry</th><th>SL</th><th>TP</th><th>Shares</th><th>Notional</th><th>Score</th></tr></thead>
+          <tbody>
+            <tr><td><b>2857.T</b></td><td>645.8</td><td>644.38</td><td>648.35</td><td>300</td><td>193740</td><td>2.9813</td></tr>
+          </tbody>
+        </table>
+        
+        <h3>Latest Signals: 2026-02-20 / close</h3>
+        <table>
+          <thead><tr><th>Ticker</th><th>Entry</th><th>SL</th><th>TP</th><th>Shares</th><th>Notional</th><th>Score</th></tr></thead>
+          <tbody>
+            <tr><td><b>4572.T</b></td><td>325.0</td><td>311.47</td><td>349.36</td><td>100</td><td>32500</td><td>3.5674</td></tr><tr><td><b>5125.T</b></td><td>687.0</td><td>670.35</td><td>716.97</td><td>100</td><td>68700</td><td>2.956</td></tr>
+          </tbody>
+        </table>
+        
+
+  <h2>OPEN positions (if you had entered) — Watchlist</h2>
+  <div class="muted">※ これは「過去にエントリーしていたら未決済」を示す一覧。今持ってないなら“買うリスト”ではなく“検証上の未決済”です。</div>
+  <table>
+    <thead><tr><th>Date</th><th>Session</th><th>Ticker</th><th>Entry</th><th>SL</th><th>TP</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>2026-03-03</td><td>morning</td><td><b>8285.T</b></td><td>715.0</td><td>700.48</td><td>741.13</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>7354.T</b></td><td>338.0</td><td>329.37</td><td>353.54</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>5125.T</b></td><td>687.0</td><td>670.35</td><td>716.97</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>4880.T</b></td><td>406.0</td><td>395.71</td><td>424.52</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>4572.T</b></td><td>325.0</td><td>311.47</td><td>349.36</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>4293.T</b></td><td>404.0</td><td>395.94</td><td>418.5</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>4166.T</b></td><td>727.0</td><td>715.52</td><td>747.67</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>7354.T</b></td><td>338.0</td><td>329.37</td><td>353.54</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>7317.T</b></td><td>1087.0</td><td>1085.36</td><td>1089.95</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>5125.T</b></td><td>687.0</td><td>670.35</td><td>716.97</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>4880.T</b></td><td>406.0</td><td>395.71</td><td>424.52</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>4572.T</b></td><td>325.0</td><td>311.47</td><td>349.36</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>4293.T</b></td><td>404.0</td><td>395.94</td><td>418.5</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>4166.T</b></td><td>727.0</td><td>715.52</td><td>747.67</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>2857.T</b></td><td>645.8</td><td>644.38</td><td>648.35</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>7354.T</b></td><td>338.0</td><td>329.37</td><td>353.54</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>5125.T</b></td><td>687.0</td><td>670.35</td><td>716.97</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>4880.T</b></td><td>406.0</td><td>395.71</td><td>424.52</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>4572.T</b></td><td>325.0</td><td>311.47</td><td>349.36</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>4293.T</b></td><td>404.0</td><td>395.94</td><td>418.5</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>4166.T</b></td><td>727.0</td><td>715.52</td><td>747.67</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>7354.T</b></td><td>338.0</td><td>329.37</td><td>353.54</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>5125.T</b></td><td>687.0</td><td>670.35</td><td>716.97</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>4880.T</b></td><td>406.0</td><td>395.71</td><td>424.52</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>4572.T</b></td><td>325.0</td><td>311.47</td><td>349.36</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>4293.T</b></td><td>404.0</td><td>395.94</td><td>418.5</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>4166.T</b></td><td>727.0</td><td>715.52</td><td>747.67</td><td>OPEN</td></tr>
+    </tbody>
+  </table>
+
+  <h2>All results (latest per date/session/ticker)</h2>
+  <table>
+    <thead><tr><th>Date</th><th>Session</th><th>Ticker</th><th>Entry</th><th>SL</th><th>TP</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>2026-03-03</td><td>morning</td><td><b>8613.T</b></td><td>1090.0</td><td>1079.42</td><td>1109.04</td><td>WIN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>6584.T</b></td><td>841.0</td><td>825.13</td><td>869.57</td><td>WIN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>1887.T</b></td><td>674.0</td><td>663.41</td><td>693.06</td><td>WIN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>8285.T</b></td><td>715.0</td><td>700.48</td><td>741.13</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>7354.T</b></td><td>338.0</td><td>329.37</td><td>353.54</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>5125.T</b></td><td>687.0</td><td>670.35</td><td>716.97</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>4880.T</b></td><td>406.0</td><td>395.71</td><td>424.52</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>4572.T</b></td><td>325.0</td><td>311.47</td><td>349.36</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>4293.T</b></td><td>404.0</td><td>395.94</td><td>418.5</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>4166.T</b></td><td>727.0</td><td>715.52</td><td>747.67</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>7455.T</b></td><td>578.0</td><td>577.22</td><td>579.41</td><td>LOSS</td></tr><tr><td>2026-03-03</td><td>morning</td><td><b>2157.T</b></td><td>1166.0</td><td>1150.19</td><td>1194.46</td><td>LOSS</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>8613.T</b></td><td>1090.0</td><td>1079.42</td><td>1109.04</td><td>WIN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>6584.T</b></td><td>841.0</td><td>825.13</td><td>869.57</td><td>WIN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>1887.T</b></td><td>674.0</td><td>663.41</td><td>693.06</td><td>WIN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>7354.T</b></td><td>338.0</td><td>329.37</td><td>353.54</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>7317.T</b></td><td>1087.0</td><td>1085.36</td><td>1089.95</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>5125.T</b></td><td>687.0</td><td>670.35</td><td>716.97</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>4880.T</b></td><td>406.0</td><td>395.71</td><td>424.52</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>4572.T</b></td><td>325.0</td><td>311.47</td><td>349.36</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>4293.T</b></td><td>404.0</td><td>395.94</td><td>418.5</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>4166.T</b></td><td>727.0</td><td>715.52</td><td>747.67</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>2857.T</b></td><td>645.8</td><td>644.38</td><td>648.35</td><td>OPEN</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>7455.T</b></td><td>578.0</td><td>577.22</td><td>579.41</td><td>LOSS</td></tr><tr><td>2026-03-03</td><td>close</td><td><b>2157.T</b></td><td>1166.0</td><td>1150.19</td><td>1194.46</td><td>LOSS</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>8613.T</b></td><td>1090.0</td><td>1079.42</td><td>1109.04</td><td>WIN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>6584.T</b></td><td>841.0</td><td>825.13</td><td>869.57</td><td>WIN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>1887.T</b></td><td>674.0</td><td>663.41</td><td>693.06</td><td>WIN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>7354.T</b></td><td>338.0</td><td>329.37</td><td>353.54</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>5125.T</b></td><td>687.0</td><td>670.35</td><td>716.97</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>4880.T</b></td><td>406.0</td><td>395.71</td><td>424.52</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>4572.T</b></td><td>325.0</td><td>311.47</td><td>349.36</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>4293.T</b></td><td>404.0</td><td>395.94</td><td>418.5</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>4166.T</b></td><td>727.0</td><td>715.52</td><td>747.67</td><td>OPEN</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>7455.T</b></td><td>578.0</td><td>577.22</td><td>579.41</td><td>LOSS</td></tr><tr><td>2026-03-02</td><td>close</td><td><b>2157.T</b></td><td>1166.0</td><td>1150.19</td><td>1194.46</td><td>LOSS</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>8613.T</b></td><td>1090.0</td><td>1079.42</td><td>1109.04</td><td>WIN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>6584.T</b></td><td>841.0</td><td>825.13</td><td>869.57</td><td>WIN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>1887.T</b></td><td>674.0</td><td>663.41</td><td>693.06</td><td>WIN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>7354.T</b></td><td>338.0</td><td>329.37</td><td>353.54</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>5125.T</b></td><td>687.0</td><td>670.35</td><td>716.97</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>4880.T</b></td><td>406.0</td><td>395.71</td><td>424.52</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>4572.T</b></td><td>325.0</td><td>311.47</td><td>349.36</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>4293.T</b></td><td>404.0</td><td>395.94</td><td>418.5</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>4166.T</b></td><td>727.0</td><td>715.52</td><td>747.67</td><td>OPEN</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>7455.T</b></td><td>578.0</td><td>577.22</td><td>579.41</td><td>LOSS</td></tr><tr><td>2026-02-20</td><td>close</td><td><b>2157.T</b></td><td>1166.0</td><td>1150.19</td><td>1194.46</td><td>LOSS</td></tr>
+    </tbody>
+  </table>
+</body>
+</html>
