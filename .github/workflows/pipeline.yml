@@ -2,10 +2,10 @@ name: Stock Scan Pipeline
 
 on:
   schedule:
-    # 前場終了後（11:35 JST = 02:35 UTC）
-    - cron: "35 2 * * 1-5"
-    # 引け後（15:35 JST = 06:35 UTC）
-    - cron: "35 6 * * 1-5"
+    # 前場終了後（11:20 JST = 02:20 UTC）
+    - cron: "20 2 * * 1-5"
+    # 引け後（15:20 JST = 06:20 UTC）
+    - cron: "20 6 * * 1-5"
 
   workflow_dispatch:
     inputs:
@@ -21,6 +21,10 @@ on:
         description: "Backfill last N days (0 = disabled). Ex: 10"
         required: false
         default: "0"
+
+concurrency:
+  group: stock-scan-pipeline
+  cancel-in-progress: false
 
 jobs:
   run:
