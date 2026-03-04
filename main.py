@@ -6,6 +6,10 @@ SCAN v3.1 (GitHub Actions stable)
 - universe excel auto-detect (tse_listed_issues.xlsx preferred)
 - yfinance MultiIndex/duplicate-columns safe normalization
 - ALWAYS write signals + latest files (even when errors occur)
+
+Changes (win-rate oriented):
+- Add score_detail (vol/candle/dist breakdown) + atr_pct into signals JSON
+- Add minimum risk width filter (risk_per_share_min) to avoid too-tight SL noise
 """
 
 import os
@@ -33,7 +37,7 @@ SIGNALS_DIR = "signals"
 
 INTERVAL_1H = "1h"
 
-# Risk / sizing (placeholder; adjust as needed)
+# Risk / sizing
 DEFAULT_ACCOUNT_SIZE = 200_000
 DEFAULT_RISK_PER_TRADE = 0.01
 DEFAULT_LOT_SIZE = 100  # Japanese stock lot size (100 shares)
@@ -52,6 +56,10 @@ NOW_MAX_DIST = 0.020   # +2.0%
 
 USE_1H_CONFIRM = True  # require vol >= ma20
 VOL_MA_WINDOW = 20
+
+# --- NEW: Minimum risk width filter (per-share risk) ---
+# Too small risk_per_share => SL is too tight => easily stopped by noise
+RISK_PER_SHARE_MIN_DEFAULT = 2.0  # JPY per share (start here; tune with backtest)
 
 # Universe file preference
 UNIVERSE_XLSX_PRIMARY = "tse_listed_issues.xlsx"
@@ -416,6 +424,14 @@ def parse_args():
     p.add_argument("--risk_per_trade", type=float, default=DEFAULT_RISK_PER_TRADE, help="Risk budget per trade as fraction of account_size")
     p.add_argument("--lot_size", type=int, default=DEFAULT_LOT_SIZE, help="Share lot size (e.g., 100 for Japan stocks)")
 
+    # --- NEW: minimum risk width filter ---
+    p.add_argument(
+        "--risk_per_share_min",
+        type=float,
+        default=RISK_PER_SHARE_MIN_DEFAULT,
+        help="Minimum per-share risk (entry-sl). Too small => likely noise stop-outs. Default: 2.0 JPY/share",
+    )
+
     p.add_argument("--market_filter", choices=["on", "off"], default="on")
     p.add_argument("--market_ticker", default="^N225")
 
@@ -462,9 +478,20 @@ def main():
             "confirm_1h": 0,
             "risk_zero": 0,
             "ta_missing": 0,
+            # --- NEW ---
+            "risk_min_filter": 0,
         },
         "errors": [],
         "candidates": [],
+        # --- NEW: record tuning params for debugging ---
+        "params": {
+            "risk_per_share_min": float(args.risk_per_share_min),
+            "min_avg_vol_1h": float(MIN_AVG_VOL_1H),
+            "now_min_dist": float(NOW_MIN_DIST),
+            "now_max_dist": float(NOW_MAX_DIST),
+            "use_1h_confirm": bool(USE_1H_CONFIRM),
+            "vol_ma_window": int(VOL_MA_WINDOW),
+        },
     }
 
     safe_print(f"=== SCAN v3.1 (session={session}) ===")
@@ -598,19 +625,35 @@ def main():
                 payload["drop_stats"]["risk_zero"] += 1
                 continue
 
+            # --- NEW: minimum risk width filter ---
+            if risk_per_share < float(args.risk_per_share_min):
+                payload["drop_stats"]["risk_min_filter"] += 1
+                continue
+
             tp = entry + (risk_per_share * float(args.rr))
 
+            # ATR% (for debugging / future filters)
+            atr_pct = (atr / entry) if entry > 0 else float("nan")
+
             # NOTE: sizing is finalized AFTER ranking, with cash/lot constraints.
-            # keep per-share risk here for later sizing.
             shares = 0
 
-            # score (simple)
-            candle_pct = (float(sel_row["Close"]) / float(sel_row["Open"]) - 1.0) * 100.0 if float(sel_row["Open"]) != 0 else 0.0
-            vol_factor = (float(sel_row["Volume"]) / (vol_ma + 1e-9)) if (not math.isnan(vol_ma) and vol_ma > 0 and "Volume" in sel_row.index) else 0.0
-            score = 0.0
-            score += min(2.0, max(0.0, vol_factor))
-            score += max(0.0, candle_pct / 2.0)
-            score += max(0.0, 1.0 - abs(dist_now) * 50.0)
+            # score (simple) + breakdown
+            candle_pct = (
+                (float(sel_row["Close"]) / float(sel_row["Open"]) - 1.0) * 100.0
+                if float(sel_row["Open"]) != 0 else 0.0
+            )
+            vol_factor = (
+                (float(sel_row["Volume"]) / (vol_ma + 1e-9))
+                if (not math.isnan(vol_ma) and vol_ma > 0 and "Volume" in sel_row.index)
+                else 0.0
+            )
+
+            vol_term = min(2.0, max(0.0, vol_factor))
+            candle_term = max(0.0, candle_pct / 2.0)
+            dist_term = max(0.0, 1.0 - abs(dist_now) * 50.0)
+
+            score = float(vol_term + candle_term + dist_term)
 
             sig_hits_total += 1
 
@@ -623,9 +666,19 @@ def main():
                 "risk_per_share": round(float(risk_per_share), 6),
                 "rr": float(args.rr),
                 "atr_mult": float(args.atr_mult),
+                "atr": round(float(atr), 6),
+                "atr_pct": round(float(atr_pct), 8) if not math.isnan(atr_pct) else None,
                 "dist_to_ema20_pct": round(dist_now * 100, 2),
                 "sig_bar_utc": str(pd.Timestamp(sel_ts_utc)),
                 "score": round(score, 4),
+                "score_detail": {
+                    "vol_factor": round(float(vol_factor), 6),
+                    "vol_term": round(float(vol_term), 6),
+                    "candle_pct": round(float(candle_pct), 6),
+                    "candle_term": round(float(candle_term), 6),
+                    "dist_now": round(float(dist_now), 8),
+                    "dist_term": round(float(dist_term), 6),
+                },
                 "avg_vol_1h": round(avg_vol_1h, 2),
             })
 
