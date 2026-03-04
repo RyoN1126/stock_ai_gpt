@@ -2,10 +2,10 @@ name: Stock Scan Pipeline
 
 on:
   schedule:
-    # 前場終了後（11:20 JST = 02:20 UTC）
-    - cron: "20 2 * * 1-5"
-    # 引け後（15:20 JST = 06:20 UTC）
-    - cron: "20 6 * * 1-5"
+    # 前場終了後（11:00 JST = 02:00 UTC）
+    - cron: "00 2 * * 1-5"
+    # 引け後（15:00 JST = 06:00 UTC）
+    - cron: "00 6 * * 1-5"
 
   workflow_dispatch:
     inputs:
