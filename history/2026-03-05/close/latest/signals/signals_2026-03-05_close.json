@@ -8,51 +8,51 @@
   "market_filter": "on",
   "market_info": {
     "ticker": "^N225",
-    "close": 55052.3984375,
-    "sma50": 54009.0065625,
-    "sma200": 46356.3157421875,
+    "close": 55231.01171875,
+    "sma50": 54012.578828125,
+    "sma200": 46357.20880859375,
     "ok": true
   },
   "max_positions": 2,
   "count": 1,
-  "sig_hits_total": 18,
+  "sig_hits_total": 67,
   "drop_stats": {
     "no_data_1h": 102,
     "price_filter": 226,
-    "liquidity_filter": 2401,
-    "dist_filter": 1091,
-    "confirm_1h": 258,
+    "liquidity_filter": 2408,
+    "dist_filter": 1045,
+    "confirm_1h": 249,
     "risk_zero": 0,
     "ta_missing": 0,
-    "risk_min_filter": 1
+    "risk_min_filter": 0
   },
   "errors": [],
   "candidates": [
     {
-      "ticker": "2510.T",
-      "entry": 847.5,
-      "sl": 844.26,
-      "tp": 853.32,
+      "ticker": "2251.T",
+      "entry": 845.7,
+      "sl": 841.42,
+      "tp": 853.4,
       "shares": 200,
-      "risk_per_share": 3.235592,
+      "risk_per_share": 4.278977,
       "rr": 1.8,
       "atr_mult": 1.0,
-      "atr": 3.235592,
-      "atr_pct": 0.00381781,
-      "dist_to_ema20_pct": 0.96,
-      "sig_bar_utc": "2026-03-05 03:00:00+00:00",
-      "score": 3.2546,
+      "atr": 4.278977,
+      "atr_pct": 0.00505969,
+      "dist_to_ema20_pct": 0.28,
+      "sig_bar_utc": "2026-03-05 06:00:00+00:00",
+      "score": 2.8597,
       "score_detail": {
-        "vol_factor": 5.094244,
+        "vol_factor": 2.138941,
         "vol_term": 2.0,
-        "candle_pct": 1.4727,
-        "candle_term": 0.73635,
-        "dist_now": 0.00963416,
-        "dist_term": 0.518292
+        "candle_pct": -0.01182,
+        "candle_term": 0.0,
+        "dist_now": 0.00280688,
+        "dist_term": 0.859656
       },
-      "avg_vol_1h": 26641.95,
-      "notional_yen": 169500,
-      "risk_yen": 647.12
+      "avg_vol_1h": 31038.39,
+      "notional_yen": 169140,
+      "risk_yen": 855.8
     }
   ],
   "params": {
@@ -68,7 +68,7 @@
     "risk_per_trade": 0.01,
     "lot_size": 100,
     "risk_yen_per_trade": 2000.0,
-    "remaining_cash": 30500,
+    "remaining_cash": 30860,
     "dropped_by_cash_or_lot": 1
   }
 }
