@@ -1,0 +1,41 @@
+{
+  "version": "v3.1",
+  "asof": "2026-03-23 15:30:00+09:00",
+  "session": "close",
+  "session_note": "Run after market close. Use last 1H bar up to 15:30 JST.",
+  "target_date_jst": "2026-03-23",
+  "cutoff": "15:30",
+  "market_filter": "on",
+  "market_info": {
+    "ticker": "^N225",
+    "close": 51300.21875,
+    "sma50": 54757.840625,
+    "sma200": 47255.9934375,
+    "ok": false
+  },
+  "max_positions": 2,
+  "count": 0,
+  "sig_hits_total": 0,
+  "drop_stats": {
+    "no_data_1h": 0,
+    "price_filter": 0,
+    "liquidity_filter": 0,
+    "dist_filter": 0,
+    "confirm_1h": 0,
+    "risk_zero": 0,
+    "ta_missing": 0,
+    "risk_min_filter": 0
+  },
+  "errors": [
+    "market_filter_blocked_entries"
+  ],
+  "candidates": [],
+  "params": {
+    "risk_per_share_min": 2.0,
+    "min_avg_vol_1h": 10000.0,
+    "now_min_dist": -0.005,
+    "now_max_dist": 0.02,
+    "use_1h_confirm": true,
+    "vol_ma_window": 20
+  }
+}
