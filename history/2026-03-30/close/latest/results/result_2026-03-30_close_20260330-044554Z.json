@@ -1,0 +1,37 @@
+{
+  "meta": {
+    "signal_path": "signals/signals_2026-03-30_close.json",
+    "asof": "2026-03-30 15:30:00+09:00",
+    "start": "2026-03-30",
+    "end": "2026-04-06",
+    "hold_days": 5,
+    "account_size": 200000.0,
+    "lot_size": 100,
+    "allow_unfilled_entry": false,
+    "eval_window_utc": {
+      "asof_utc": "2026-03-30T06:30:00+00:00",
+      "end_utc": "2026-04-04T06:30:00+00:00"
+    },
+    "assumption_same_bar": "LOSS_first_if_SL_and_TP_touched_in_same_1h_bar",
+    "market_info": {
+      "ticker": "^N225",
+      "close": 51587.01953125,
+      "sma50": 54795.268359375,
+      "sma200": 47634.70818359375,
+      "ok": false
+    },
+    "market_filter": "on",
+    "session": "close"
+  },
+  "summary": {
+    "trades_total": 0,
+    "resolved": 0,
+    "wins": 0,
+    "losses": 0,
+    "not_filled": 0,
+    "win_rate_resolved": 0.0,
+    "total_R": 0.0,
+    "total_pnl_yen": 0.0
+  },
+  "results": []
+}
