@@ -1,0 +1,100 @@
+{
+  "version": "v3.1",
+  "asof": "2026-04-13 15:30:00+09:00",
+  "session": "close",
+  "session_note": "Run after market close. Use last 1H bar up to 15:30 JST.",
+  "target_date_jst": "2026-04-13",
+  "cutoff": "15:30",
+  "market_filter": "on",
+  "market_info": {
+    "ticker": "^N225",
+    "close": 56484.19921875,
+    "sma50": 54967.968984375,
+    "sma200": 48447.3284375,
+    "ok": true
+  },
+  "max_positions": 2,
+  "count": 2,
+  "sig_hits_total": 21,
+  "drop_stats": {
+    "no_data_1h": 108,
+    "price_filter": 236,
+    "liquidity_filter": 2366,
+    "dist_filter": 912,
+    "confirm_1h": 453,
+    "risk_zero": 0,
+    "ta_missing": 0,
+    "risk_min_filter": 1
+  },
+  "errors": [],
+  "candidates": [
+    {
+      "ticker": "3167.T",
+      "entry": 1182.0,
+      "sl": 1170.16,
+      "tp": 1203.31,
+      "shares": 100,
+      "risk_per_share": 11.841127,
+      "rr": 1.8,
+      "atr_mult": 1.0,
+      "atr": 11.841127,
+      "atr_pct": 0.01001787,
+      "dist_to_ema20_pct": 0.16,
+      "sig_bar_utc": "2026-04-13 04:00:00+00:00",
+      "score": 2.8237,
+      "score_detail": {
+        "vol_factor": 1.904478,
+        "vol_term": 1.904478,
+        "candle_pct": 0.0,
+        "candle_term": 0.0,
+        "dist_now": 0.00161621,
+        "dist_term": 0.91919
+      },
+      "avg_vol_1h": 28554.99,
+      "notional_yen": 118200,
+      "risk_yen": 1184.11
+    },
+    {
+      "ticker": "8881.T",
+      "entry": 719.0,
+      "sl": 709.07,
+      "tp": 736.88,
+      "shares": 100,
+      "risk_per_share": 9.931599,
+      "rr": 1.8,
+      "atr_mult": 1.0,
+      "atr": 9.931599,
+      "atr_pct": 0.01381307,
+      "dist_to_ema20_pct": -0.41,
+      "sig_bar_utc": "2026-04-13 05:00:00+00:00",
+      "score": 2.7942,
+      "score_detail": {
+        "vol_factor": 2.22012,
+        "vol_term": 2.0,
+        "candle_pct": 0.0,
+        "candle_term": 0.0,
+        "dist_now": -0.00411671,
+        "dist_term": 0.794164
+      },
+      "avg_vol_1h": 17663.66,
+      "notional_yen": 71900,
+      "risk_yen": 993.16
+    }
+  ],
+  "params": {
+    "risk_per_share_min": 2.0,
+    "min_avg_vol_1h": 10000.0,
+    "now_min_dist": -0.005,
+    "now_max_dist": 0.02,
+    "use_1h_confirm": true,
+    "vol_ma_window": 20
+  },
+  "sizing": {
+    "account_size": 200000,
+    "risk_per_trade": 0.01,
+    "lot_size": 100,
+    "risk_yen_per_trade": 2000.0,
+    "remaining_cash": 9900,
+    "dropped_by_cash_or_lot": 0
+  }
+}
