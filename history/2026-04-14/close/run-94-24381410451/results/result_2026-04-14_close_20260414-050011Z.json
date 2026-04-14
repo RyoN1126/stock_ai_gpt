@@ -1,0 +1,64 @@
+{
+  "meta": {
+    "signal_path": "signals/signals_2026-04-14_close.json",
+    "asof": "2026-04-14 15:30:00+09:00",
+    "start": "2026-04-14",
+    "end": "2026-04-21",
+    "hold_days": 5,
+    "account_size": 200000.0,
+    "lot_size": 100,
+    "allow_unfilled_entry": false,
+    "eval_window_utc": {
+      "asof_utc": "2026-04-14T06:30:00+00:00",
+      "end_utc": "2026-04-19T06:30:00+00:00"
+    },
+    "assumption_same_bar": "LOSS_first_if_SL_and_TP_touched_in_same_1h_bar",
+    "market_info": {
+      "ticker": "^N225",
+      "close": 57880.75,
+      "sma50": 55058.443359375,
+      "sma200": 48542.399296875,
+      "ok": true
+    },
+    "market_filter": "on",
+    "session": "close"
+  },
+  "summary": {
+    "trades_total": 2,
+    "resolved": 0,
+    "wins": 0,
+    "losses": 0,
+    "not_filled": 0,
+    "win_rate_resolved": 0.0,
+    "total_R": 0.0,
+    "total_pnl_yen": 0.0
+  },
+  "results": [
+    {
+      "ticker": "4053.T",
+      "result": "OPEN",
+      "R": 0.0,
+      "pnl_yen": 0.0,
+      "entry": 437.0,
+      "sl": 429.29,
+      "tp": 450.88,
+      "shares_requested": 200,
+      "shares_used": 200,
+      "notional_yen": 87400.0,
+      "result_reason": "no_price_data"
+    },
+    {
+      "ticker": "7192.T",
+      "result": "OPEN",
+      "R": 0.0,
+      "pnl_yen": 0.0,
+      "entry": 647.0,
+      "sl": 638.35,
+      "tp": 662.58,
+      "shares_requested": 100,
+      "shares_used": 100,
+      "notional_yen": 64700.0,
+      "result_reason": "no_price_data"
+    }
+  ]
+}
