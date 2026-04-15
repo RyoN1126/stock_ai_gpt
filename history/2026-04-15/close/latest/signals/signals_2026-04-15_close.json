@@ -8,23 +8,23 @@
   "market_filter": "on",
   "market_info": {
     "ticker": "^N225",
-    "close": 58343.7109375,
-    "sma50": 55158.793359375,
-    "sma200": 48641.65935546875,
+    "close": 58134.23828125,
+    "sma50": 55154.60390625,
+    "sma200": 48640.6119921875,
     "ok": true
   },
   "max_positions": 2,
   "count": 0,
-  "sig_hits_total": 57,
+  "sig_hits_total": 195,
   "drop_stats": {
     "no_data_1h": 109,
-    "price_filter": 224,
-    "liquidity_filter": 2381,
-    "dist_filter": 861,
-    "confirm_1h": 465,
+    "price_filter": 222,
+    "liquidity_filter": 2382,
+    "dist_filter": 836,
+    "confirm_1h": 352,
     "risk_zero": 0,
     "ta_missing": 0,
-    "risk_min_filter": 0
+    "risk_min_filter": 1
   },
   "errors": [],
   "candidates": [],
