@@ -19,9 +19,9 @@
   "drop_stats": {
     "no_data_1h": 113,
     "price_filter": 222,
-    "liquidity_filter": 2381,
+    "liquidity_filter": 2380,
     "dist_filter": 857,
-    "confirm_1h": 331,
+    "confirm_1h": 332,
     "risk_zero": 0,
     "ta_missing": 0,
     "risk_min_filter": 2
