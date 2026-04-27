@@ -8,20 +8,20 @@
   "market_filter": "on",
   "market_info": {
     "ticker": "^N225",
-    "close": 60713.8203125,
-    "sma50": 55833.186953125,
-    "sma200": 49443.73876953125,
+    "close": 60537.359375,
+    "sma50": 55829.657734375,
+    "sma200": 49442.85646484375,
     "ok": true
   },
   "max_positions": 2,
-  "count": 1,
-  "sig_hits_total": 10,
+  "count": 2,
+  "sig_hits_total": 93,
   "drop_stats": {
     "no_data_1h": 113,
-    "price_filter": 236,
-    "liquidity_filter": 2375,
-    "dist_filter": 1102,
-    "confirm_1h": 260,
+    "price_filter": 238,
+    "liquidity_filter": 2371,
+    "dist_filter": 1135,
+    "confirm_1h": 146,
     "risk_zero": 0,
     "ta_missing": 0,
     "risk_min_filter": 1
@@ -29,30 +29,56 @@
   "errors": [],
   "candidates": [
     {
-      "ticker": "9274.T",
-      "entry": 944.0,
-      "sl": 928.27,
-      "tp": 972.31,
+      "ticker": "3939.T",
+      "entry": 546.0,
+      "sl": 535.71,
+      "tp": 564.51,
       "shares": 100,
-      "risk_per_share": 15.728855,
+      "risk_per_share": 10.285959,
       "rr": 1.8,
       "atr_mult": 1.0,
-      "atr": 15.728855,
-      "atr_pct": 0.01666192,
-      "dist_to_ema20_pct": -0.26,
-      "sig_bar_utc": "2026-04-27 05:00:00+00:00",
-      "score": 3.7309,
+      "atr": 10.285959,
+      "atr_pct": 0.01883875,
+      "dist_to_ema20_pct": 0.11,
+      "sig_bar_utc": "2026-04-27 06:00:00+00:00",
+      "score": 3.313,
       "score_detail": {
-        "vol_factor": 2.218354,
+        "vol_factor": 3.213093,
         "vol_term": 2.0,
-        "candle_pct": 1.724138,
-        "candle_term": 0.862069,
-        "dist_now": -0.00262273,
-        "dist_term": 0.868864
+        "candle_pct": 0.738007,
+        "candle_term": 0.369004,
+        "dist_now": 0.0011196,
+        "dist_term": 0.94402
       },
-      "avg_vol_1h": 19084.96,
-      "notional_yen": 94400,
-      "risk_yen": 1572.89
+      "avg_vol_1h": 15790.95,
+      "notional_yen": 54600,
+      "risk_yen": 1028.6
+    },
+    {
+      "ticker": "9535.T",
+      "entry": 401.0,
+      "sl": 395.11,
+      "tp": 411.6,
+      "shares": 300,
+      "risk_per_share": 5.888684,
+      "rr": 1.8,
+      "atr_mult": 1.0,
+      "atr": 5.888684,
+      "atr_pct": 0.014685,
+      "dist_to_ema20_pct": 1.03,
+      "sig_bar_utc": "2026-04-27 06:00:00+00:00",
+      "score": 2.989,
+      "score_detail": {
+        "vol_factor": 7.377198,
+        "vol_term": 2.0,
+        "candle_pct": 1.007557,
+        "candle_term": 0.503778,
+        "dist_now": 0.01029488,
+        "dist_term": 0.485256
+      },
+      "avg_vol_1h": 19649.05,
+      "notional_yen": 120300,
+      "risk_yen": 1766.61
     }
   ],
   "params": {
@@ -68,7 +94,7 @@
     "risk_per_trade": 0.01,
     "lot_size": 100,
     "risk_yen_per_trade": 2000.0,
-    "remaining_cash": 105600,
-    "dropped_by_cash_or_lot": 1
+    "remaining_cash": 25100,
+    "dropped_by_cash_or_lot": 0
   }
 }
