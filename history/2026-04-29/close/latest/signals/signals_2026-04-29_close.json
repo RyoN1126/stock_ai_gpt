@@ -15,13 +15,13 @@
   },
   "max_positions": 2,
   "count": 0,
-  "sig_hits_total": 150,
+  "sig_hits_total": 151,
   "drop_stats": {
-    "no_data_1h": 112,
+    "no_data_1h": 113,
     "price_filter": 232,
-    "liquidity_filter": 2381,
-    "dist_filter": 953,
-    "confirm_1h": 266,
+    "liquidity_filter": 2373,
+    "dist_filter": 958,
+    "confirm_1h": 267,
     "risk_zero": 0,
     "ta_missing": 0,
     "risk_min_filter": 3
