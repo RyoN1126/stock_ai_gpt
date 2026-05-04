@@ -15,13 +15,13 @@
   },
   "max_positions": 2,
   "count": 1,
-  "sig_hits_total": 95,
+  "sig_hits_total": 97,
   "drop_stats": {
     "no_data_1h": 117,
     "price_filter": 236,
-    "liquidity_filter": 2388,
-    "dist_filter": 966,
-    "confirm_1h": 295,
+    "liquidity_filter": 2385,
+    "dist_filter": 968,
+    "confirm_1h": 294,
     "risk_zero": 0,
     "ta_missing": 0,
     "risk_min_filter": 0
@@ -50,7 +50,7 @@
         "dist_now": 0.00224393,
         "dist_term": 0.887804
       },
-      "avg_vol_1h": 14121.48,
+      "avg_vol_1h": 13881.48,
       "notional_yen": 46600,
       "risk_yen": 1210.65
     }
