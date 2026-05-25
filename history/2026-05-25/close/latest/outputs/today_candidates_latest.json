@@ -1,0 +1,74 @@
+{
+  "version": "v3.1",
+  "asof": "2026-05-25 15:30:00+09:00",
+  "session": "close",
+  "session_note": "Run after market close. Use last 1H bar up to 15:30 JST.",
+  "target_date_jst": "2026-05-25",
+  "cutoff": "15:30",
+  "market_filter": "on",
+  "market_info": {
+    "ticker": "^N225",
+    "close": 65133.83984375,
+    "sma50": 57442.00453125,
+    "sma200": 51188.4559765625,
+    "ok": true
+  },
+  "max_positions": 2,
+  "count": 1,
+  "sig_hits_total": 59,
+  "drop_stats": {
+    "no_data_1h": 130,
+    "price_filter": 243,
+    "liquidity_filter": 2368,
+    "dist_filter": 1003,
+    "confirm_1h": 294,
+    "risk_zero": 0,
+    "ta_missing": 0,
+    "risk_min_filter": 0
+  },
+  "errors": [],
+  "candidates": [
+    {
+      "ticker": "4572.T",
+      "entry": 437.0,
+      "sl": 420.22,
+      "tp": 467.21,
+      "shares": 100,
+      "risk_per_share": 16.781005,
+      "rr": 1.8,
+      "atr_mult": 1.0,
+      "atr": 16.781005,
+      "atr_pct": 0.03840047,
+      "dist_to_ema20_pct": -0.06,
+      "sig_bar_utc": "2026-05-25 06:00:00+00:00",
+      "score": 3.0943,
+      "score_detail": {
+        "vol_factor": 1.663468,
+        "vol_term": 1.663468,
+        "candle_pct": 0.923788,
+        "candle_term": 0.461894,
+        "dist_now": -0.00062143,
+        "dist_term": 0.968928
+      },
+      "avg_vol_1h": 18503.63,
+      "notional_yen": 43700,
+      "risk_yen": 1678.1
+    }
+  ],
+  "params": {
+    "risk_per_share_min": 2.0,
+    "min_avg_vol_1h": 10000.0,
+    "now_min_dist": -0.005,
+    "now_max_dist": 0.02,
+    "use_1h_confirm": true,
+    "vol_ma_window": 20
+  },
+  "sizing": {
+    "account_size": 200000,
+    "risk_per_trade": 0.01,
+    "lot_size": 100,
+    "risk_yen_per_trade": 2000.0,
+    "remaining_cash": 156300,
+    "dropped_by_cash_or_lot": 1
+  }
+}
