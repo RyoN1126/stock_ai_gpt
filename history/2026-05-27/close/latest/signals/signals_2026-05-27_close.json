@@ -8,50 +8,50 @@
   "market_filter": "on",
   "market_info": {
     "ticker": "^N225",
-    "close": 65213.69921875,
-    "sma50": 57861.212109375,
-    "sma200": 51427.3541796875,
+    "close": 64999.41015625,
+    "sma50": 57856.926328125,
+    "sma200": 51426.282734375,
     "ok": true
   },
   "max_positions": 2,
   "count": 1,
-  "sig_hits_total": 60,
+  "sig_hits_total": 135,
   "drop_stats": {
     "no_data_1h": 134,
-    "price_filter": 244,
-    "liquidity_filter": 2371,
-    "dist_filter": 915,
-    "confirm_1h": 369,
+    "price_filter": 245,
+    "liquidity_filter": 2372,
+    "dist_filter": 923,
+    "confirm_1h": 287,
     "risk_zero": 0,
     "ta_missing": 0,
-    "risk_min_filter": 4
+    "risk_min_filter": 1
   },
   "errors": [],
   "candidates": [
     {
       "ticker": "6418.T",
-      "entry": 940.0,
-      "sl": 922.79,
-      "tp": 970.98,
+      "entry": 939.0,
+      "sl": 921.79,
+      "tp": 969.98,
       "shares": 100,
       "risk_per_share": 17.210515,
       "rr": 1.8,
       "atr_mult": 1.0,
       "atr": 17.210515,
-      "atr_pct": 0.01830906,
-      "dist_to_ema20_pct": 0.04,
+      "atr_pct": 0.01832856,
+      "dist_to_ema20_pct": -0.06,
       "sig_bar_utc": "2026-05-27 06:00:00+00:00",
-      "score": 3.2077,
+      "score": 3.2209,
       "score_detail": {
-        "vol_factor": 1.743532,
-        "vol_term": 1.743532,
-        "candle_pct": 0.966702,
-        "candle_term": 0.483351,
-        "dist_now": 0.00038364,
-        "dist_term": 0.980818
+        "vol_factor": 1.820218,
+        "vol_term": 1.820218,
+        "candle_pct": 0.859291,
+        "candle_term": 0.429646,
+        "dist_now": -0.0005793,
+        "dist_term": 0.971035
       },
-      "avg_vol_1h": 13153.51,
-      "notional_yen": 94000,
+      "avg_vol_1h": 13157.14,
+      "notional_yen": 93900,
       "risk_yen": 1721.05
     }
   ],
@@ -68,7 +68,7 @@
     "risk_per_trade": 0.01,
     "lot_size": 100,
     "risk_yen_per_trade": 2000.0,
-    "remaining_cash": 106000,
+    "remaining_cash": 106100,
     "dropped_by_cash_or_lot": 1
   }
 }
