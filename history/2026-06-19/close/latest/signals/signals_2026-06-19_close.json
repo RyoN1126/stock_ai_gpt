@@ -9,18 +9,18 @@
   "market_info": {
     "ticker": "^N225",
     "close": 71250.0625,
-    "sma50": 62605.284453125,
-    "sma200": 53573.50578125,
+    "sma50": 62252.488203125,
+    "sma200": 53431.2891796875,
     "ok": true
   },
   "max_positions": 2,
   "count": 1,
-  "sig_hits_total": 231,
+  "sig_hits_total": 233,
   "drop_stats": {
     "no_data_1h": 152,
     "price_filter": 241,
-    "liquidity_filter": 2396,
-    "dist_filter": 814,
+    "liquidity_filter": 2392,
+    "dist_filter": 816,
     "confirm_1h": 262,
     "risk_zero": 0,
     "ta_missing": 0,
@@ -50,7 +50,7 @@
         "dist_now": -0.00036652,
         "dist_term": 0.981674
       },
-      "avg_vol_1h": 10985.95,
+      "avg_vol_1h": 11097.38,
       "notional_yen": 125800,
       "risk_yen": 1760.46
     }
