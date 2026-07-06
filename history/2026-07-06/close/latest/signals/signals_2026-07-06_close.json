@@ -8,51 +8,51 @@
   "market_filter": "on",
   "market_info": {
     "ticker": "^N225",
-    "close": 69612.03125,
-    "sma50": 65403.265859375,
-    "sma200": 55089.50056640625,
+    "close": 69737.6875,
+    "sma50": 65405.778984375,
+    "sma200": 55090.12884765625,
     "ok": true
   },
   "max_positions": 2,
   "count": 1,
-  "sig_hits_total": 117,
+  "sig_hits_total": 150,
   "drop_stats": {
-    "no_data_1h": 170,
+    "no_data_1h": 169,
     "price_filter": 225,
-    "liquidity_filter": 2394,
-    "dist_filter": 884,
-    "confirm_1h": 306,
+    "liquidity_filter": 2397,
+    "dist_filter": 887,
+    "confirm_1h": 267,
     "risk_zero": 0,
     "ta_missing": 0,
-    "risk_min_filter": 1
+    "risk_min_filter": 2
   },
   "errors": [],
   "candidates": [
     {
       "ticker": "6635.T",
-      "entry": 719.0,
-      "sl": 704.3,
-      "tp": 745.46,
+      "entry": 720.0,
+      "sl": 705.23,
+      "tp": 746.59,
       "shares": 100,
-      "risk_per_share": 14.701839,
+      "risk_per_share": 14.773267,
       "rr": 1.8,
       "atr_mult": 1.0,
-      "atr": 14.701839,
-      "atr_pct": 0.02044762,
-      "dist_to_ema20_pct": 0.56,
+      "atr": 14.773267,
+      "atr_pct": 0.02051843,
+      "dist_to_ema20_pct": 0.69,
       "sig_bar_utc": "2026-07-06 06:00:00+00:00",
-      "score": 2.9986,
+      "score": 3.0053,
       "score_detail": {
-        "vol_factor": 3.622351,
+        "vol_factor": 4.517304,
         "vol_term": 2.0,
-        "candle_pct": 0.559441,
-        "candle_term": 0.27972,
-        "dist_now": 0.00562311,
-        "dist_term": 0.718844
+        "candle_pct": 0.699301,
+        "candle_term": 0.34965,
+        "dist_now": 0.00688763,
+        "dist_term": 0.655618
       },
-      "avg_vol_1h": 11605.78,
-      "notional_yen": 71900,
-      "risk_yen": 1470.18
+      "avg_vol_1h": 11599.75,
+      "notional_yen": 72000,
+      "risk_yen": 1477.33
     }
   ],
   "params": {
@@ -68,7 +68,7 @@
     "risk_per_trade": 0.01,
     "lot_size": 100,
     "risk_yen_per_trade": 2000.0,
-    "remaining_cash": 128100,
+    "remaining_cash": 128000,
     "dropped_by_cash_or_lot": 1
   }
 }
