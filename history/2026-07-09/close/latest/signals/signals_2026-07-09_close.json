@@ -8,26 +8,53 @@
   "market_filter": "on",
   "market_info": {
     "ticker": "^N225",
-    "close": 67834.9375,
-    "sma50": 65895.1525,
-    "sma200": 55449.9797265625,
+    "close": 67743.8515625,
+    "sma50": 65893.33078125,
+    "sma200": 55449.524296875,
     "ok": true
   },
   "max_positions": 2,
-  "count": 0,
-  "sig_hits_total": 97,
+  "count": 1,
+  "sig_hits_total": 152,
   "drop_stats": {
     "no_data_1h": 173,
     "price_filter": 222,
-    "liquidity_filter": 2393,
-    "dist_filter": 776,
-    "confirm_1h": 434,
+    "liquidity_filter": 2397,
+    "dist_filter": 761,
+    "confirm_1h": 387,
     "risk_zero": 0,
     "ta_missing": 0,
-    "risk_min_filter": 2
+    "risk_min_filter": 5
   },
   "errors": [],
-  "candidates": [],
+  "candidates": [
+    {
+      "ticker": "9235.T",
+      "entry": 505.0,
+      "sl": 488.67,
+      "tp": 534.39,
+      "shares": 100,
+      "risk_per_share": 16.328285,
+      "rr": 1.8,
+      "atr_mult": 1.0,
+      "atr": 16.328285,
+      "atr_pct": 0.03233324,
+      "dist_to_ema20_pct": 0.09,
+      "sig_bar_utc": "2026-07-09 06:00:00+00:00",
+      "score": 3.9653,
+      "score_detail": {
+        "vol_factor": 2.365591,
+        "vol_term": 2.0,
+        "candle_pct": 2.020202,
+        "candle_term": 1.010101,
+        "dist_now": 0.00089683,
+        "dist_term": 0.955158
+      },
+      "avg_vol_1h": 27594.61,
+      "notional_yen": 50500,
+      "risk_yen": 1632.83
+    }
+  ],
   "params": {
     "risk_per_share_min": 2.0,
     "min_avg_vol_1h": 10000.0,
@@ -41,7 +68,7 @@
     "risk_per_trade": 0.01,
     "lot_size": 100,
     "risk_yen_per_trade": 2000.0,
-    "remaining_cash": 200000,
-    "dropped_by_cash_or_lot": 2
+    "remaining_cash": 149500,
+    "dropped_by_cash_or_lot": 1
   }
 }
