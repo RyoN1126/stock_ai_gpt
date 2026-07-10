@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "signal_path": "signals/signals_2026-07-10_close.json",
+    "asof": "2026-07-10 15:30:00+09:00",
+    "start": "2026-07-10",
+    "end": "2026-07-17",
+    "hold_days": 5,
+    "account_size": 200000.0,
+    "lot_size": 100,
+    "allow_unfilled_entry": false,
+    "eval_window_utc": {
+      "asof_utc": "2026-07-10T06:30:00+00:00",
+      "end_utc": "2026-07-15T06:30:00+00:00"
+    },
+    "assumption_same_bar": "LOSS_first_if_SL_and_TP_touched_in_same_1h_bar",
+    "market_info": {
+      "ticker": "^N225",
+      "close": 68557.7265625,
+      "sma50": 66053.738125,
+      "sma200": 55570.4504296875,
+      "ok": true
+    },
+    "market_filter": "on",
+    "session": "close"
+  },
+  "summary": {
+    "trades_total": 1,
+    "resolved": 0,
+    "wins": 0,
+    "losses": 0,
+    "not_filled": 0,
+    "win_rate_resolved": 0.0,
+    "total_R": 0.0,
+    "total_pnl_yen": 0.0
+  },
+  "results": [
+    {
+      "ticker": "6635.T",
+      "result": "OPEN",
+      "R": 0.0,
+      "pnl_yen": 0.0,
+      "entry": 706.0,
+      "sl": 691.53,
+      "tp": 732.05,
+      "shares_requested": 100,
+      "shares_used": 100,
+      "notional_yen": 70600.0,
+      "result_reason": "no_price_data"
+    }
+  ]
+}
