@@ -8,9 +8,9 @@
   "market_filter": "on",
   "market_info": {
     "ticker": "^N225",
-    "close": 64457.7109375,
-    "sma50": 66905.596015625,
-    "sma200": 56524.9434375,
+    "close": 64611.1484375,
+    "sma50": 66908.664765625,
+    "sma200": 56525.710625,
     "ok": false
   },
   "max_positions": 2,
