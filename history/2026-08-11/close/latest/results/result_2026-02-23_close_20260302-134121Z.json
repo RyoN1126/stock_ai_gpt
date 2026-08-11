@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "signal_path": "signals/signals_2026-02-23_close.json",
+    "asof": "2026-02-23 15:30:00+09:00",
+    "start": "2026-02-23",
+    "end": "2026-03-02",
+    "hold_days": 5,
+    "account_size": 200000.0,
+    "lot_size": 100,
+    "allow_unfilled_entry": false,
+    "eval_window_utc": {
+      "asof_utc": "2026-02-23T06:30:00+00:00",
+      "end_utc": "2026-02-28T06:30:00+00:00"
+    },
+    "assumption_same_bar": "LOSS_first_if_SL_and_TP_touched_in_same_1h_bar",
+    "market_info": {
+      "ticker": "^N225",
+      "close": 56825.69921875,
+      "sma50": 52903.9425,
+      "sma200": 45540.7264453125,
+      "ok": true
+    },
+    "market_filter": "on",
+    "session": "close"
+  },
+  "summary": {
+    "trades_total": 1,
+    "resolved": 1,
+    "wins": 0,
+    "losses": 1,
+    "not_filled": 0,
+    "win_rate_resolved": 0.0,
+    "total_R": -1.0,
+    "total_pnl_yen": -233.99999999999181
+  },
+  "results": [
+    {
+      "ticker": "7455.T",
+      "result": "LOSS",
+      "R": -1.0,
+      "pnl_yen": -233.99999999999181,
+      "entry": 578.0,
+      "sl": 577.22,
+      "tp": 579.41,
+      "shares_requested": 300,
+      "shares_used": 300,
+      "notional_yen": 173400.0,
+      "result_reason": "sl_touched"
+    }
+  ]
+}
