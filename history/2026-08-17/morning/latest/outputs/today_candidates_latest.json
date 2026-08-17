@@ -1,0 +1,74 @@
+{
+  "version": "v3.1",
+  "asof": "2026-08-17 11:30:00+09:00",
+  "session": "morning",
+  "session_note": "Run after morning session. Use last 1H bar up to 11:30 JST.",
+  "target_date_jst": "2026-08-17",
+  "cutoff": "11:30",
+  "market_filter": "on",
+  "market_info": {
+    "ticker": "^N225",
+    "close": 68721.4375,
+    "sma50": 67370.20078125,
+    "sma200": 57644.39845703125,
+    "ok": true
+  },
+  "max_positions": 2,
+  "count": 1,
+  "sig_hits_total": 51,
+  "drop_stats": {
+    "no_data_1h": 212,
+    "price_filter": 210,
+    "liquidity_filter": 2335,
+    "dist_filter": 841,
+    "confirm_1h": 446,
+    "risk_zero": 0,
+    "ta_missing": 0,
+    "risk_min_filter": 2
+  },
+  "errors": [],
+  "candidates": [
+    {
+      "ticker": "1398.T",
+      "entry": 1874.0,
+      "sl": 1860.4,
+      "tp": 1898.48,
+      "shares": 100,
+      "risk_per_share": 13.601885,
+      "rr": 1.8,
+      "atr_mult": 1.0,
+      "atr": 13.601885,
+      "atr_pct": 0.00725821,
+      "dist_to_ema20_pct": -0.05,
+      "sig_bar_utc": "2026-08-17 00:00:00+00:00",
+      "score": 3.1082,
+      "score_detail": {
+        "vol_factor": 5.885766,
+        "vol_term": 2.0,
+        "candle_pct": 0.267523,
+        "candle_term": 0.133761,
+        "dist_now": -0.00051147,
+        "dist_term": 0.974427
+      },
+      "avg_vol_1h": 106067.58,
+      "notional_yen": 187400,
+      "risk_yen": 1360.19
+    }
+  ],
+  "params": {
+    "risk_per_share_min": 2.0,
+    "min_avg_vol_1h": 10000.0,
+    "now_min_dist": -0.005,
+    "now_max_dist": 0.02,
+    "use_1h_confirm": true,
+    "vol_ma_window": 20
+  },
+  "sizing": {
+    "account_size": 200000,
+    "risk_per_trade": 0.01,
+    "lot_size": 100,
+    "risk_yen_per_trade": 2000.0,
+    "remaining_cash": 12600,
+    "dropped_by_cash_or_lot": 1
+  }
+}
