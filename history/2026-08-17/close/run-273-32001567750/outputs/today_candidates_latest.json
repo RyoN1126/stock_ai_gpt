@@ -1,0 +1,47 @@
+{
+  "version": "v3.1",
+  "asof": "2026-08-17 15:30:00+09:00",
+  "session": "close",
+  "session_note": "Run after market close. Use last 1H bar up to 15:30 JST.",
+  "target_date_jst": "2026-08-17",
+  "cutoff": "15:30",
+  "market_filter": "on",
+  "market_info": {
+    "ticker": "^N225",
+    "close": 69140.921875,
+    "sma50": 67378.59046875,
+    "sma200": 57646.49587890625,
+    "ok": true
+  },
+  "max_positions": 2,
+  "count": 0,
+  "sig_hits_total": 66,
+  "drop_stats": {
+    "no_data_1h": 211,
+    "price_filter": 209,
+    "liquidity_filter": 2336,
+    "dist_filter": 815,
+    "confirm_1h": 459,
+    "risk_zero": 0,
+    "ta_missing": 0,
+    "risk_min_filter": 1
+  },
+  "errors": [],
+  "candidates": [],
+  "params": {
+    "risk_per_share_min": 2.0,
+    "min_avg_vol_1h": 10000.0,
+    "now_min_dist": -0.005,
+    "now_max_dist": 0.02,
+    "use_1h_confirm": true,
+    "vol_ma_window": 20
+  },
+  "sizing": {
+    "account_size": 200000,
+    "risk_per_trade": 0.01,
+    "lot_size": 100,
+    "risk_yen_per_trade": 2000.0,
+    "remaining_cash": 200000,
+    "dropped_by_cash_or_lot": 2
+  }
+}
