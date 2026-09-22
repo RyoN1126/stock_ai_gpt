@@ -1,0 +1,15 @@
+{
+  "written_at_utc": "2026-09-22T07:22:51.355956+00:00",
+  "target_date_jst": "2026-09-22",
+  "session": "close",
+  "latest_file": "signals/signals_2026-09-22_close.json",
+  "cutoff": "15:30",
+  "market_filter": "on",
+  "market_info": {
+    "ticker": "^N225",
+    "close": 65018.94921875,
+    "sma50": 65656.788046875,
+    "sma200": 59720.62146484375,
+    "ok": false
+  }
+}
