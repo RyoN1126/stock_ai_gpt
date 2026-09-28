@@ -1,0 +1,64 @@
+{
+  "meta": {
+    "signal_path": "signals/signals_2026-09-28_close.json",
+    "asof": "2026-09-28 15:30:00+09:00",
+    "start": "2026-09-28",
+    "end": "2026-10-05",
+    "hold_days": 5,
+    "account_size": 200000.0,
+    "lot_size": 100,
+    "allow_unfilled_entry": false,
+    "eval_window_utc": {
+      "asof_utc": "2026-09-28T06:30:00+00:00",
+      "end_utc": "2026-10-03T06:30:00+00:00"
+    },
+    "assumption_same_bar": "LOSS_first_if_SL_and_TP_touched_in_same_1h_bar",
+    "market_info": {
+      "ticker": "^N225",
+      "close": 65877.6171875,
+      "sma50": 65541.018125,
+      "sma200": 59959.50009765625,
+      "ok": true
+    },
+    "market_filter": "on",
+    "session": "close"
+  },
+  "summary": {
+    "trades_total": 2,
+    "resolved": 0,
+    "wins": 0,
+    "losses": 0,
+    "not_filled": 0,
+    "win_rate_resolved": 0.0,
+    "total_R": 0.0,
+    "total_pnl_yen": 0.0
+  },
+  "results": [
+    {
+      "ticker": "7373.T",
+      "result": "OPEN",
+      "R": 0.0,
+      "pnl_yen": 0.0,
+      "entry": 915.0,
+      "sl": 903.95,
+      "tp": 934.89,
+      "shares_requested": 100,
+      "shares_used": 100,
+      "notional_yen": 91500.0,
+      "result_reason": "no_price_data"
+    },
+    {
+      "ticker": "9474.T",
+      "result": "OPEN",
+      "R": 0.0,
+      "pnl_yen": 0.0,
+      "entry": 923.0,
+      "sl": 915.7,
+      "tp": 936.13,
+      "shares_requested": 100,
+      "shares_used": 100,
+      "notional_yen": 92300.0,
+      "result_reason": "no_price_data"
+    }
+  ]
+}
