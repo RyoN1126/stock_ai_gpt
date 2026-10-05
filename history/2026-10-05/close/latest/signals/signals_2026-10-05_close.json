@@ -18,10 +18,10 @@
   "sig_hits_total": 169,
   "drop_stats": {
     "no_data_1h": 214,
-    "price_filter": 212,
-    "liquidity_filter": 2409,
-    "dist_filter": 935,
-    "confirm_1h": 158,
+    "price_filter": 211,
+    "liquidity_filter": 2415,
+    "dist_filter": 931,
+    "confirm_1h": 157,
     "risk_zero": 0,
     "ta_missing": 0,
     "risk_min_filter": 0
