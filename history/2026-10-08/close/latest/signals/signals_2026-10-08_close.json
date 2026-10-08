@@ -15,13 +15,13 @@
   },
   "max_positions": 2,
   "count": 1,
-  "sig_hits_total": 138,
+  "sig_hits_total": 207,
   "drop_stats": {
-    "no_data_1h": 214,
-    "price_filter": 220,
-    "liquidity_filter": 2253,
-    "dist_filter": 1022,
-    "confirm_1h": 250,
+    "no_data_1h": 211,
+    "price_filter": 207,
+    "liquidity_filter": 2392,
+    "dist_filter": 933,
+    "confirm_1h": 147,
     "risk_zero": 0,
     "ta_missing": 0,
     "risk_min_filter": 0
@@ -43,14 +43,14 @@
       "sig_bar_utc": "2026-10-08 06:00:00+00:00",
       "score": 4.2551,
       "score_detail": {
-        "vol_factor": 2.939522,
+        "vol_factor": 3.775971,
         "vol_term": 2.0,
         "candle_pct": 2.555911,
         "candle_term": 1.277955,
-        "dist_now": 0.00045753,
-        "dist_term": 0.977124
+        "dist_now": 0.00045749,
+        "dist_term": 0.977126
       },
-      "avg_vol_1h": 16326.25,
+      "avg_vol_1h": 13011.43,
       "notional_yen": 64200,
       "risk_yen": 1748.34
     }
