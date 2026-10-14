@@ -14,47 +14,20 @@
     "ok": true
   },
   "max_positions": 2,
-  "count": 1,
-  "sig_hits_total": 318,
+  "count": 0,
+  "sig_hits_total": 250,
   "drop_stats": {
-    "no_data_1h": 214,
+    "no_data_1h": 213,
     "price_filter": 222,
-    "liquidity_filter": 2251,
-    "dist_filter": 836,
-    "confirm_1h": 254,
+    "liquidity_filter": 2260,
+    "dist_filter": 832,
+    "confirm_1h": 318,
     "risk_zero": 0,
     "ta_missing": 0,
     "risk_min_filter": 2
   },
   "errors": [],
-  "candidates": [
-    {
-      "ticker": "9414.T",
-      "entry": 949.0,
-      "sl": 937.01,
-      "tp": 970.57,
-      "shares": 100,
-      "risk_per_share": 11.985362,
-      "rr": 1.8,
-      "atr_mult": 1.0,
-      "atr": 11.985362,
-      "atr_pct": 0.01262946,
-      "dist_to_ema20_pct": 0.27,
-      "sig_bar_utc": "2026-10-14 06:00:00+00:00",
-      "score": 3.2888,
-      "score_detail": {
-        "vol_factor": 2.55887,
-        "vol_term": 2.0,
-        "candle_pct": 0.850159,
-        "candle_term": 0.42508,
-        "dist_now": 0.00272491,
-        "dist_term": 0.863754
-      },
-      "avg_vol_1h": 11086.98,
-      "notional_yen": 94900,
-      "risk_yen": 1198.54
-    }
-  ],
+  "candidates": [],
   "params": {
     "risk_per_share_min": 2.0,
     "min_avg_vol_1h": 10000.0,
@@ -68,7 +41,7 @@
     "risk_per_trade": 0.01,
     "lot_size": 100,
     "risk_yen_per_trade": 2000.0,
-    "remaining_cash": 105100,
-    "dropped_by_cash_or_lot": 1
+    "remaining_cash": 200000,
+    "dropped_by_cash_or_lot": 2
   }
 }
