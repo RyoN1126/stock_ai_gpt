@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "signal_path": "signals/signals_2026-02-20_morning.json",
+    "asof": "2026-02-20 11:30:00+09:00",
+    "start": "2026-02-20",
+    "end": "2026-02-27",
+    "hold_days": 5,
+    "account_size": 200000.0,
+    "lot_size": 100,
+    "allow_unfilled_entry": false,
+    "eval_window_utc": {
+      "asof_utc": "2026-02-20T02:30:00+00:00",
+      "end_utc": "2026-02-25T02:30:00+00:00"
+    },
+    "assumption_same_bar": "LOSS_first_if_SL_and_TP_touched_in_same_1h_bar",
+    "market_info": {
+      "ticker": "^N225",
+      "close": 56825.69921875,
+      "sma50": 52903.9425,
+      "sma200": 45540.7264453125,
+      "ok": true
+    },
+    "market_filter": "on",
+    "session": "morning"
+  },
+  "summary": {
+    "trades_total": 1,
+    "resolved": 1,
+    "wins": 1,
+    "losses": 0,
+    "not_filled": 0,
+    "win_rate_resolved": 1.0,
+    "total_R": 1.8002520478891015,
+    "total_pnl_yen": 2857.000000000005
+  },
+  "results": [
+    {
+      "ticker": "6584.T",
+      "result": "WIN",
+      "R": 1.8002520478891015,
+      "pnl_yen": 2857.000000000005,
+      "entry": 841.0,
+      "sl": 825.13,
+      "tp": 869.57,
+      "shares_requested": 100,
+      "shares_used": 100,
+      "notional_yen": 84100.0,
+      "result_reason": "tp_touched"
+    }
+  ]
+}
